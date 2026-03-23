@@ -1,147 +1,60 @@
-/**
- * Rent Tracker - Hurstville
- * Displays and filters rent payment data from Excel export
- */
+HURSTVILLE RENT TRACKER
+=======================
 
-// ===== DATA SOURCE (Parsed from Rent for Hurstville.xlsx) =====
-const rentData = [
-    { date: "27-Jan-2026", totalRent: 750, iPaid: 750, roommatePaid: 0, myNet: 750, roommatePaidOn: null, status: "paid" },
-    { date: "2-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: null, myNet: 750, roommatePaidOn: null, status: "pending" },
-    { date: "9-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: 850, myNet: -100, roommatePaidOn: "12-Feb-2026", status: "paid", note: "Roommate overpaid" },
-    { date: "16-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, myNet: 365, roommatePaidOn: "20-Feb-2026", status: "paid" },
-    { date: "23-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, myNet: 365, roommatePaidOn: "27-Feb-2026", status: "paid" },
-    { date: "2-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, myNet: 365, roommatePaidOn: "6-Mar-2026", status: "paid" },
-    { date: "9-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, myNet: 365, roommatePaidOn: "13-Mar-2026", status: "paid" },
-    { date: "16-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, myNet: 365, roommatePaidOn: "20-Mar-2026", status: "paid" },
-    // Add remaining rows as needed - truncated for brevity
-    // Pattern: weekly $750 rent, roommate pays ~$385 starting mid-Feb
-];
+A clean, responsive web app to track rent payments and roommate contributions.
+Now with Excel file upload support!
 
-// ===== DOM ELEMENTS =====
-const tableBody = document.getElementById('tableBody');
-const searchInput = document.getElementById('searchInput');
-const monthFilter = document.getElementById('monthFilter');
-const summaryGrid = document.getElementById('summaryGrid');
-const emptyState = document.getElementById('emptyState');
+📦 DEPLOYMENT INSTRUCTIONS:
+1. Save all 4 files in a folder with this exact structure:
+   ├── index.html
+   ├── css/
+   │   └── styles.css
+   ├── js/
+   │   └── script.js
+   └── README.txt
 
-// ===== UTILITY FUNCTIONS =====
-const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined) return '-';
-    const formatted = Math.abs(amount).toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
-    return amount < 0 ? `-${formatted}` : formatted;
-};
+2. ZIP the entire folder (not the files individually)
 
-const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    return dateStr;
-};
+3. Go to https://static.app/free-website-hosting
+4. Sign up / Log in
+5. Create a new site → Upload your ZIP file
+6. Publish! Your site will be live instantly 🎉
 
-const getStatusBadge = (status, roommatePaidOn) => {
-    if (status === 'paid') {
-        return `<span class="status paid">✓ Paid</span>`;
-    } else if (roommatePaidOn) {
-        return `<span class="status pending">⏳ Pending</span>`;
-    }
-    return `<span class="status missed">✗ Missed</span>`;
-};
+✨ NEW FEATURES:
+• 📤 Upload your "Rent for Hurstville.xlsx" directly
+• 🔒 File processed locally in browser (no server upload)
+• 📊 Auto-parses all rows from your Excel file
+• 📥 Export summary to Excel
+• 🔃 Reset to sample data anytime
 
-// ===== RENDER FUNCTIONS =====
-const renderSummary = (data) => {
-    const totalWeeks = data.length;
-    const totalRent = data.reduce((sum, row) => sum + (row.totalRent || 0), 0);
-    const totalIPaid = data.reduce((sum, row) => sum + (row.iPaid || 0), 0);
-    const totalRoommate = data.reduce((sum, row) => sum + (row.roommatePaid || 0), 0);
-    const netMyContribution = data.reduce((sum, row) => sum + (row.myNet || 0), 0);
-    const pendingCount = data.filter(row => row.status === 'pending').length;
+✨ ORIGINAL FEATURES:
+• Weekly rent payment history
+• Summary cards showing totals and net contributions
+• Search by date or status
+• Filter by month
+• Mobile-responsive design
+• Accessible (keyboard nav, ARIA labels)
+• Print-friendly styles
 
-    summaryGrid.innerHTML = `
-        <div class="summary-card">
-            <div class="label">Total Weeks</div>
-            <div class="value">${totalWeeks}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label">Total Rent</div>
-            <div class="value">${formatCurrency(totalRent)}</div>
-        </div>
-        <div class="summary-card positive">
-            <div class="label">Roommate Contributed</div>
-            <div class="value">${formatCurrency(totalRoommate)}</div>
-        </div>
-        <div class="summary-card ${netMyContribution < 0 ? 'negative' : 'positive'}">
-            <div class="label">My Net Contribution</div>
-            <div class="value">${formatCurrency(netMyContribution)}</div>
-        </div>
-        <div class="summary-card">
-            <div class="label">Pending Payments</div>
-            <div class="value">${pendingCount}</div>
-        </div>
-    `;
-};
+📊 DATA NOTES:
+• All monetary values in AUD
+• Negative "My Net" = roommate overpaid (credit to you)
+• Status: ✓ Paid, ⏳ Pending, ✗ Unpaid
 
-const renderTable = (data) => {
-    if (data.length === 0) {
-        tableBody.innerHTML = '';
-        emptyState.hidden = false;
-        return;
-    }
-    
-    emptyState.hidden = true;
-    
-    tableBody.innerHTML = data.map(row => `
-        <tr>
-            <td><strong>${formatDate(row.date)}</strong></td>
-            <td>${formatCurrency(row.totalRent)}</td>
-            <td>${formatCurrency(row.iPaid)}</td>
-            <td class="${row.roommatePaid < 0 ? 'negative' : ''}">${formatCurrency(row.roommatePaid)}</td>
-            <td class="${row.myNet < 0 ? 'negative' : row.myNet > 0 ? 'positive' : ''}">${formatCurrency(row.myNet)}</td>
-            <td><small>${formatDate(row.roommatePaidOn)}</small></td>
-            <td>${getStatusBadge(row.status, row.roommatePaidOn)}</td>
-        </tr>
-    `).join('');
-};
+📁 SUPPORTED FILE FORMATS:
+• .xlsx (Excel 2007+)
+• .xls (Excel 97-2003)
+• .csv (Comma-separated values)
 
-// ===== FILTER & SEARCH =====
-const populateMonthFilter = (data) => {
-    const months = [...new Set(data.map(row => {
-        if (!row.date) return null;
-        return row.date.substring(3); // "Jan-2026"
-    }).filter(Boolean))];
-    
-    months.forEach(month => {
-        const option = document.createElement('option');
-        option.value = month;
-        option.textContent = month;
-        monthFilter.appendChild(option);
-    });
-};
+🔧 CUSTOMIZATION:
+• Edit js/script.js to modify sample data
+• Update css/styles.css colors via CSS variables at the top
+• Change site title in index.html <title> tag
 
-const filterData = () => {
-    const searchTerm = searchInput.value.toLowerCase();
-    const selectedMonth = monthFilter.value;
-    
-    const filtered = rentData.filter(row => {
-        const matchesSearch = !searchTerm || 
-            row.date?.toLowerCase().includes(searchTerm) ||
-            row.status?.toLowerCase().includes(searchTerm);
-        
-        const matchesMonth = selectedMonth === 'all' || 
-            row.date?.includes(selectedMonth);
-        
-        return matchesSearch && matchesMonth;
-    });
-    
-    renderTable(filtered);
-};
+🛠 TROUBLESHOOTING:
+• File not uploading? Ensure it's .xlsx, .xls, or .csv format
+• Data not showing? Check Excel has data in first sheet
+• Styles missing? Verify folder structure is correct
+• Site not loading? Ensure main file is named "index.html"
 
-// ===== INITIALIZE =====
-const init = () => {
-    renderSummary(rentData);
-    populateMonthFilter(rentData);
-    renderTable(rentData);
-    
-    searchInput.addEventListener('input', filterData);
-    monthFilter.addEventListener('change', filterData);
-};
-
-// ===== START APP =====
-document.addEventListener('DOMContentLoaded', init);
+📄 LICENSE: Free for personal use. Data from "Rent for
