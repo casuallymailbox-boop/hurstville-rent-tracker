@@ -6,8 +6,7 @@
     <title>Rent Tracker - Hurstville</title>
     <meta name="description" content="Track rent payments and roommate contributions for Hurstville property">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
-    <!-- SheetJS Library for Export Only -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -20,15 +19,13 @@
 
     <main class="container">
         <!-- Toast Notification -->
-        <div id="toast" class="toast" hidden>
+        <div id="toast" class="toast" style="display: none;">
             <span id="toastMessage"></span>
             <button class="toast-close" id="toastClose">&times;</button>
         </div>
 
         <!-- Summary Cards -->
-        <section class="summary-grid" id="summaryGrid">
-            <!-- Populated by JavaScript -->
-        </section>
+        <section class="summary-grid" id="summaryGrid"></section>
 
         <!-- Controls -->
         <section class="controls">
@@ -40,7 +37,7 @@
                 <input type="text" id="searchInput" placeholder="Search by date..." aria-label="Search payments">
             </div>
             <div class="filter-group">
-                <label for="monthFilter">Filter by Month:</label>
+                <label for="monthFilter">Filter:</label>
                 <select id="monthFilter" aria-label="Filter by month">
                     <option value="all">All Months</option>
                 </select>
@@ -51,7 +48,7 @@
                         <line x1="12" y1="5" x2="12" y2="19"/>
                         <line x1="5" y1="12" x2="19" y2="12"/>
                     </svg>
-                    Add Entry
+                    <span>Add</span>
                 </button>
                 <button class="btn-export" id="btnExport">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,7 +56,7 @@
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Export
+                    <span>Export</span>
                 </button>
             </div>
         </section>
@@ -79,14 +76,12 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody">
-                    <!-- Populated by JavaScript -->
-                </tbody>
+                <tbody id="tableBody"></tbody>
             </table>
         </section>
 
         <!-- Empty State -->
-        <div id="emptyState" class="empty-state" hidden>
+        <div id="emptyState" class="empty-state" style="display: none;">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
             </svg>
@@ -97,7 +92,7 @@
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                Add First Entry
+                <span>Add First Entry</span>
             </button>
         </div>
     </main>
@@ -127,7 +122,6 @@
                         <div class="form-group">
                             <label for="entryIPaid">Amount ($)</label>
                             <input type="number" id="entryIPaid" step="0.01" placeholder="0.00">
-                            <small class="form-help">Leave blank if not paid</small>
                         </div>
                     </div>
                     
@@ -185,7 +179,6 @@
                         <div class="form-group">
                             <label for="editIPaid">Amount ($)</label>
                             <input type="number" id="editIPaid" step="0.01" placeholder="0.00">
-                            <small class="form-help">Leave blank if not paid</small>
                         </div>
                     </div>
                     
@@ -236,7 +229,6 @@
 
     <footer class="footer">
         <p>Hurstville Rent Tracker • Data stored locally in your browser</p>
-        <p class="privacy-note">🔒 No data is sent to any server. For cross-device sync, see README.</p>
     </footer>
 
     <script src="js/script.js"></script>
