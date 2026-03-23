@@ -6,7 +6,9 @@
     <title>Rent Tracker - Hurstville</title>
     <meta name="description" content="Track rent payments and roommate contributions for Hurstville property">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+    <!-- SheetJS Library for Excel Parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header class="header">
@@ -17,6 +19,29 @@
     </header>
 
     <main class="container">
+        <!-- Upload Section -->
+        <section class="upload-section">
+            <div class="upload-box" id="uploadBox">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <h3>Upload Your Excel File</h3>
+                <p>Drag & drop or click to select "Rent for Hurstville.xlsx"</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+                <button class="btn-upload" id="btnUpload">Choose File</button>
+                <p class="file-info" id="fileInfo"></p>
+            </div>
+            <button class="btn-reset" id="btnReset" hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/>
+                    <path d="M3 3v9h9"/>
+                </svg>
+                Reset to Sample Data
+            </button>
+        </section>
+
         <!-- Summary Cards -->
         <section class="summary-grid" id="summaryGrid">
             <!-- Populated by JavaScript -->
@@ -25,7 +50,10 @@
         <!-- Controls -->
         <section class="controls">
             <div class="search-box">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
                 <input type="text" id="searchInput" placeholder="Search by date..." aria-label="Search payments">
             </div>
             <div class="filter-group">
@@ -33,6 +61,16 @@
                 <select id="monthFilter" aria-label="Filter by month">
                     <option value="all">All Months</option>
                 </select>
+            </div>
+            <div class="export-group">
+                <button class="btn-export" id="btnExport">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export Summary
+                </button>
             </div>
         </section>
 
@@ -58,14 +96,35 @@
 
         <!-- Empty State -->
         <div id="emptyState" class="empty-state" hidden>
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
             <h3>No payments found</h3>
             <p>Try adjusting your search or filter criteria.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state" hidden>
+            <div class="spinner"></div>
+            <p>Processing your file...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="error-state" hidden>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <h3>Oops! Something went wrong</h3>
+            <p id="errorMessage"></p>
+            <button class="btn-retry" id="btnRetry">Try Again</button>
         </div>
     </main>
 
     <footer class="footer">
-        <p>Data source: Rent for Hurstville.xlsx • Last updated: 2026</p>
+        <p>Data source: <span id="dataSource">Sample Data</span> • Last updated: 2026</p>
+        <p class="privacy-note">🔒 Your file is processed locally in your browser. No data is uploaded to any server.</p>
     </footer>
 
     <script src="js/script.js"></script>
