@@ -12,7 +12,7 @@ const defaultData = [
     { id: "2-Mar-2026", date: "2-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "6-Mar-2026", status: "paid", notes: "" },
     { id: "9-Mar-2026", date: "9-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "13-Mar-2026", status: "paid", notes: "" },
     { id: "16-Mar-2026", date: "16-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "20-Mar-2026", status: "paid", notes: "" },
-    { id: "23-Mar-2027", date: "23-Mar-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "27-Mar-2026", status: "pending", notes: "" },
+    { id: "23-Mar-2026", date: "23-Mar-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "27-Mar-2026", status: "pending", notes: "" },
     { id: "30-Mar-2026", date: "30-Mar-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "3-Apr-2026", status: "pending", notes: "" },
     { id: "6-Apr-2026", date: "6-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "10-Apr-2026", status: "pending", notes: "" },
     { id: "13-Apr-2026", date: "13-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "17-Apr-2026", status: "pending", notes: "" },
@@ -61,9 +61,30 @@ const defaultData = [
 ];
 
 const STORAGE_KEY = 'hurstville_rent_data';
+const THEME_KEY = 'hurstville_theme';
 let currentData = [];
 
-// ===== LOAD/SAVE DATA (NO TOAST ON LOAD) =====
+// ===== THEME TOGGLE =====
+const initTheme = () => {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+};
+
+const toggleTheme = () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem(THEME_KEY, newTheme);
+};
+
+// ===== LOAD/SAVE DATA =====
 const loadData = () => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -74,7 +95,7 @@ const loadData = () => {
             saveData();
         }
     } catch (e) {
-        console.error('Error loading data:', e);
+        console.error('Error loading ', e);
         currentData = [...defaultData];
     }
 };
@@ -83,7 +104,7 @@ const saveData = () => {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
     } catch (e) {
-        console.error('Error saving data:', e);
+        console.error('Error saving ', e);
     }
 };
 
@@ -128,7 +149,7 @@ const getStatusBadge = (status, roommatePaidOn, iPaid) => {
     return `<span class="status pending">⏳ Pending</span>`;
 };
 
-// ===== TOAST (ONLY FOR ACTIONS) =====
+// ===== TOAST =====
 const showToast = (message, type = 'success') => {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
@@ -485,6 +506,12 @@ window.executeDelete = function() {
 
 // ===== SETUP EVENT LISTENERS =====
 const setupEventListeners = () => {
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+    
     const btnAddEntry = document.getElementById('btnAddEntry');
     if (btnAddEntry) btnAddEntry.addEventListener('click', window.openAddModal);
     
@@ -565,6 +592,9 @@ const setupEventListeners = () => {
 
 // ===== INITIALIZE =====
 const init = () => {
+    // Initialize theme first
+    initTheme();
+    
     const modalOverlay = document.getElementById('modalOverlay');
     const editModalOverlay = document.getElementById('editModalOverlay');
     const deleteModalOverlay = document.getElementById('deleteModalOverlay');
