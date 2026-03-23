@@ -1,5 +1,6 @@
 /**
  * Rent Tracker - Hurstville
+ * With permanent data storage via localStorage + Export/Import
  */
 
 // ===== PRE-LOADED DATA =====
@@ -60,11 +61,11 @@ const defaultData = [
     { id: "1-Feb-2027", date: "1-Feb-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "5-Feb-2027", status: "pending", notes: "" }
 ];
 
-const STORAGE_KEY = 'hurstville_rent_data';
+const STORAGE_KEY = 'hurstville_rent_data_v2';
 const THEME_KEY = 'hurstville_theme';
 let currentData = [];
 
-// ===== THEME TOGGLE - FIXED =====
+// ===== THEME TOGGLE =====
 const initTheme = () => {
     const savedTheme = localStorage.getItem(THEME_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -84,28 +85,81 @@ const toggleTheme = () => {
     localStorage.setItem(THEME_KEY, newTheme);
 };
 
-// ===== LOAD/SAVE DATA =====
+// ===== LOAD/SAVE DATA - FIXED =====
 const loadData = () => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            currentData = JSON.parse(stored);
-        } else {
-            currentData = [...defaultData];
-            saveData();
+        if (stored && stored.trim() !== '') {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                currentData = parsed;
+                console.log('Data loaded from localStorage:', currentData.length, 'entries');
+                return true;
+            }
         }
+        // No valid stored data, use defaults
+        currentData = [...defaultData];
+        saveData();
+        console.log('Using default data:', currentData.length, 'entries');
+        return false;
     } catch (e) {
         console.error('Error loading ', e);
         currentData = [...defaultData];
+        saveData();
+        return false;
     }
 };
 
 const saveData = () => {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+        console.log('Data saved to localStorage:', currentData.length, 'entries');
+        return true;
     } catch (e) {
         console.error('Error saving ', e);
+        showToast('Failed to save data', 'error');
+        return false;
     }
+};
+
+// ===== EXPORT/IMPORT DATA =====
+const exportData = () => {
+    const dataStr = JSON.stringify(currentData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hurstville-rent-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Data exported successfully!', 'success');
+};
+
+const importData = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (Array.isArray(imported)) {
+                currentData = imported;
+                saveData();
+                renderSummary(currentData);
+                populateMonthFilter(currentData);
+                renderTable(currentData);
+                showToast('Data imported successfully!', 'success');
+            } else {
+                showToast('Invalid data format', 'error');
+            }
+        } catch (err) {
+            showToast('Failed to import data', 'error');
+        }
+    };
+    reader.readAsText(file);
 };
 
 // ===== UTILITY FUNCTIONS =====
@@ -410,7 +464,7 @@ window.saveNewEntry = function(e) {
     populateMonthFilter(currentData);
     renderTable(currentData);
     window.closeAddModal();
-    showToast('Entry added!', 'success');
+    showToast('Entry saved permanently!', 'success');
 };
 
 window.updateEntry = function(e) {
@@ -506,12 +560,9 @@ window.executeDelete = function() {
 
 // ===== SETUP EVENT LISTENERS =====
 const setupEventListeners = () => {
-    // Theme Toggle - FIXED
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
-            toggleTheme();
-        });
+        themeToggle.addEventListener('click', toggleTheme);
     }
     
     const btnAddEntry = document.getElementById('btnAddEntry');
@@ -594,7 +645,6 @@ const setupEventListeners = () => {
 
 // ===== INITIALIZE =====
 const init = () => {
-    // Initialize theme first
     initTheme();
     
     const modalOverlay = document.getElementById('modalOverlay');
