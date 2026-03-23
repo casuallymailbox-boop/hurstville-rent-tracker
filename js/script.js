@@ -64,7 +64,7 @@ const STORAGE_KEY = 'hurstville_rent_data';
 const THEME_KEY = 'hurstville_theme';
 let currentData = [];
 
-// ===== THEME TOGGLE =====
+// ===== THEME TOGGLE - FIXED =====
 const initTheme = () => {
     const savedTheme = localStorage.getItem(THEME_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -506,10 +506,12 @@ window.executeDelete = function() {
 
 // ===== SETUP EVENT LISTENERS =====
 const setupEventListeners = () => {
-    // Theme Toggle
+    // Theme Toggle - FIXED
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
+        themeToggle.addEventListener('click', function() {
+            toggleTheme();
+        });
     }
     
     const btnAddEntry = document.getElementById('btnAddEntry');
