@@ -6,7 +6,7 @@
     <title>Rent Tracker - Hurstville</title>
     <meta name="description" content="Track rent payments and roommate contributions for Hurstville property">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+    <link rel="icon" href="image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
     <!-- SheetJS Library for Export Only -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -92,12 +92,18 @@
             </svg>
             <h3>No payments found</h3>
             <p>Try adjusting your search or filter criteria.</p>
-            <button class="btn-add" id="btnAddFromEmpty">Add First Entry</button>
+            <button class="btn-add" id="btnAddFromEmpty">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add First Entry
+            </button>
         </div>
     </main>
 
     <!-- Add Entry Modal -->
-    <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="modal-overlay" id="modalOverlay" style="display: none;">
         <div class="modal">
             <div class="modal-header">
                 <h2>Add New Payment Entry</h2>
@@ -154,7 +160,7 @@
     </div>
 
     <!-- Edit Entry Modal -->
-    <div class="modal-overlay" id="editModalOverlay" hidden>
+    <div class="modal-overlay" id="editModalOverlay" style="display: none;">
         <div class="modal">
             <div class="modal-header">
                 <h2>Edit Payment Entry</h2>
@@ -212,7 +218,7 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div class="modal-overlay" id="deleteModalOverlay" hidden>
+    <div class="modal-overlay" id="deleteModalOverlay" style="display: none;">
         <div class="modal modal-small">
             <div class="modal-header">
                 <h2>Confirm Delete</h2>
