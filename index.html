@@ -1,254 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rent Tracker - Hurstville</title>
-    <meta name="description" content="Track rent payments and roommate contributions for Hurstville property">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-</head>
-<body>
-    <header class="header">
-        <div class="header-content">
-            <div class="header-top">
-                <h1 class="logo">Hurstville Rent Tracker</h1>
-                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-                    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/>
-                        <line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/>
-                        <line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                </button>
-            </div>
-            <p class="subtitle">Weekly payment history & roommate contributions</p>
-        </div>
-    </header>
-
-    <main class="container">
-        <!-- Toast Notification -->
-        <div id="toast" class="toast" style="display: none;">
-            <span id="toastMessage"></span>
-            <button class="toast-close" id="toastClose">&times;</button>
-        </div>
-
-        <!-- Summary Cards -->
-        <section class="summary-grid" id="summaryGrid"></section>
-
-        <!-- Controls -->
-        <section class="controls">
-            <div class="search-box">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input type="text" id="searchInput" placeholder="Search by date..." aria-label="Search payments">
-            </div>
-            <div class="filter-group">
-                <label for="monthFilter">Filter:</label>
-                <select id="monthFilter" aria-label="Filter by month">
-                    <option value="all">All Months</option>
-                </select>
-            </div>
-            <div class="action-group">
-                <button class="btn-add" id="btnAddEntry">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    <span>Add</span>
-                </button>
-                <button class="btn-export" id="btnExport">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    <span>Export</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- Payment Table -->
-        <section class="table-container">
-            <table class="payment-table" id="paymentTable">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Total Rent</th>
-                        <th>I Paid</th>
-                        <th>Roommate Paid</th>
-                        <th>Net Paid</th>
-                        <th>Roommate Paid On</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </section>
-
-        <!-- Empty State -->
-        <div id="emptyState" class="empty-state" style="display: none;">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-            <h3>No payments found</h3>
-            <p>Try adjusting your search or filter criteria.</p>
-            <button class="btn-add" id="btnAddFromEmpty">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                <span>Add First Entry</span>
-            </button>
-        </div>
-    </main>
-
-    <!-- Add Entry Modal -->
-    <div class="modal-overlay" id="modalOverlay" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Add New Payment Entry</h2>
-                <button class="btn-close" id="btnCloseModal" aria-label="Close modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="addEntryForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="entryDate">Date *</label>
-                            <input type="date" id="entryDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="entryTotalRent">Total Rent ($)</label>
-                            <input type="number" id="entryTotalRent" step="0.01" placeholder="750.00" value="750.00">
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3>I Paid</h3>
-                        <div class="form-group">
-                            <label for="entryIPaid">Amount ($)</label>
-                            <input type="number" id="entryIPaid" step="0.01" placeholder="0.00">
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3>Roommate Paid</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="entryRoommatePaid">Amount ($)</label>
-                                <input type="number" id="entryRoommatePaid" step="0.01" placeholder="0.00">
-                            </div>
-                            <div class="form-group">
-                                <label for="entryRoommateDate">Payment Date</label>
-                                <input type="date" id="entryRoommateDate">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="entryNotes">Notes (Optional)</label>
-                        <textarea id="entryNotes" rows="2" placeholder="Any additional notes..."></textarea>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-cancel" id="btnCancelEntry">Cancel</button>
-                        <button type="submit" class="btn-save">Save Entry</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Entry Modal -->
-    <div class="modal-overlay" id="editModalOverlay" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Edit Payment Entry</h2>
-                <button class="btn-close" id="btnCloseEditModal" aria-label="Close modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="editEntryForm">
-                    <input type="hidden" id="editEntryId">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="editDate">Date *</label>
-                            <input type="date" id="editDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="editTotalRent">Total Rent ($)</label>
-                            <input type="number" id="editTotalRent" step="0.01" placeholder="750.00">
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3>I Paid</h3>
-                        <div class="form-group">
-                            <label for="editIPaid">Amount ($)</label>
-                            <input type="number" id="editIPaid" step="0.01" placeholder="0.00">
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3>Roommate Paid</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="editRoommatePaid">Amount ($)</label>
-                                <input type="number" id="editRoommatePaid" step="0.01" placeholder="0.00">
-                            </div>
-                            <div class="form-group">
-                                <label for="editRoommateDate">Payment Date</label>
-                                <input type="date" id="editRoommateDate">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="editNotes">Notes (Optional)</label>
-                        <textarea id="editNotes" rows="2" placeholder="Any additional notes..."></textarea>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-cancel" id="btnCancelEdit">Cancel</button>
-                        <button type="submit" class="btn-save">Update Entry</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div class="modal-overlay" id="deleteModalOverlay" style="display: none;">
-        <div class="modal modal-small">
-            <div class="modal-header">
-                <h2>Confirm Delete</h2>
-                <button class="btn-close" id="btnCloseDeleteModal" aria-label="Close modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this entry? This action cannot be undone.</p>
-                <div class="form-actions">
-                    <button type="button" class="btn-cancel" id="btnCancelDelete">Cancel</button>
-                    <button type="button" class="btn-delete" id="btnConfirmDelete">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <footer class="footer">
-        <p>Hurstville Rent Tracker • Data stored locally in your browser</p>
-    </footer>
-
-    <script src="js/script.js"></script>
-</body>
-</html>
+<!-- Add this button in the action-group section, after the Export button -->
+<div class="action-group">
+    <button class="btn-add" id="btnAddEntry">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Add</span>
+    </button>
+    <button class="btn-export" id="btnExport">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Export</span>
+    </button>
+    <button class="btn-export" id="btnBackup" title="Backup All Data">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Backup</span>
+    </button>
+    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="window.importData(event)">
+    <button class="btn-export" id="btnImport" title="Restore From Backup">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Restore</span>
+    </button>
+</div>
