@@ -22,53 +22,7 @@ const defaultData = [
     { id: "23-Feb-2026", date: "23-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "27-Feb-2026", status: "paid", notes: "" },
     { id: "2-Mar-2026", date: "2-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "6-Mar-2026", status: "paid", notes: "" },
     { id: "9-Mar-2026", date: "9-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "13-Mar-2026", status: "paid", notes: "" },
-    { id: "16-Mar-2026", date: "16-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "20-Mar-2026", status: "paid", notes: "" },
-    { id: "23-Mar-2026", date: "23-Mar-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "27-Mar-2026", status: "pending", notes: "" },
-    { id: "30-Mar-2026", date: "30-Mar-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "3-Apr-2026", status: "pending", notes: "" },
-    { id: "6-Apr-2026", date: "6-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "10-Apr-2026", status: "pending", notes: "" },
-    { id: "13-Apr-2026", date: "13-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "17-Apr-2026", status: "pending", notes: "" },
-    { id: "20-Apr-2026", date: "20-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "24-Apr-2026", status: "pending", notes: "" },
-    { id: "27-Apr-2026", date: "27-Apr-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "1-May-2026", status: "pending", notes: "" },
-    { id: "4-May-2026", date: "4-May-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "8-May-2026", status: "pending", notes: "" },
-    { id: "11-May-2026", date: "11-May-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "15-May-2026", status: "pending", notes: "" },
-    { id: "18-May-2026", date: "18-May-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "22-May-2026", status: "pending", notes: "" },
-    { id: "25-May-2026", date: "25-May-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "29-May-2026", status: "pending", notes: "" },
-    { id: "1-Jun-2026", date: "1-Jun-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "5-Jun-2026", status: "pending", notes: "" },
-    { id: "8-Jun-2026", date: "8-Jun-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "12-Jun-2026", status: "pending", notes: "" },
-    { id: "15-Jun-2026", date: "15-Jun-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "19-Jun-2026", status: "pending", notes: "" },
-    { id: "22-Jun-2026", date: "22-Jun-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "26-Jun-2026", status: "pending", notes: "" },
-    { id: "29-Jun-2026", date: "29-Jun-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "3-Jul-2026", status: "pending", notes: "" },
-    { id: "6-Jul-2026", date: "6-Jul-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "10-Jul-2026", status: "pending", notes: "" },
-    { id: "13-Jul-2026", date: "13-Jul-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "17-Jul-2026", status: "pending", notes: "" },
-    { id: "20-Jul-2026", date: "20-Jul-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "24-Jul-2026", status: "pending", notes: "" },
-    { id: "27-Jul-2026", date: "27-Jul-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "31-Jul-2026", status: "pending", notes: "" },
-    { id: "3-Aug-2026", date: "3-Aug-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "7-Aug-2026", status: "pending", notes: "" },
-    { id: "10-Aug-2026", date: "10-Aug-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "14-Aug-2026", status: "pending", notes: "" },
-    { id: "17-Aug-2026", date: "17-Aug-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "21-Aug-2026", status: "pending", notes: "" },
-    { id: "24-Aug-2026", date: "24-Aug-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "28-Aug-2026", status: "pending", notes: "" },
-    { id: "31-Aug-2026", date: "31-Aug-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "4-Sep-2026", status: "pending", notes: "" },
-    { id: "7-Sep-2026", date: "7-Sep-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "11-Sep-2026", status: "pending", notes: "" },
-    { id: "14-Sep-2026", date: "14-Sep-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "18-Sep-2026", status: "pending", notes: "" },
-    { id: "21-Sep-2026", date: "21-Sep-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "25-Sep-2026", status: "pending", notes: "" },
-    { id: "28-Sep-2026", date: "28-Sep-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "2-Oct-2026", status: "pending", notes: "" },
-    { id: "5-Oct-2026", date: "5-Oct-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "9-Oct-2026", status: "pending", notes: "" },
-    { id: "12-Oct-2026", date: "12-Oct-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "16-Oct-2026", status: "pending", notes: "" },
-    { id: "19-Oct-2026", date: "19-Oct-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "23-Oct-2026", status: "pending", notes: "" },
-    { id: "26-Oct-2026", date: "26-Oct-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "30-Oct-2026", status: "pending", notes: "" },
-    { id: "2-Nov-2026", date: "2-Nov-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "6-Nov-2026", status: "pending", notes: "" },
-    { id: "9-Nov-2026", date: "9-Nov-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "13-Nov-2026", status: "pending", notes: "" },
-    { id: "16-Nov-2026", date: "16-Nov-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "20-Nov-2026", status: "pending", notes: "" },
-    { id: "23-Nov-2026", date: "23-Nov-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "27-Nov-2026", status: "pending", notes: "" },
-    { id: "30-Nov-2026", date: "30-Nov-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "4-Dec-2026", status: "pending", notes: "" },
-    { id: "7-Dec-2026", date: "7-Dec-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "11-Dec-2026", status: "pending", notes: "" },
-    { id: "14-Dec-2026", date: "14-Dec-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "18-Dec-2026", status: "pending", notes: "" },
-    { id: "21-Dec-2026", date: "21-Dec-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "25-Dec-2026", status: "pending", notes: "" },
-    { id: "28-Dec-2026", date: "28-Dec-2026", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "1-Jan-2027", status: "pending", notes: "" },
-    { id: "4-Jan-2027", date: "4-Jan-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "8-Jan-2027", status: "pending", notes: "" },
-    { id: "11-Jan-2027", date: "11-Jan-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "15-Jan-2027", status: "pending", notes: "" },
-    { id: "18-Jan-2027", date: "18-Jan-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "22-Jan-2027", status: "pending", notes: "" },
-    { id: "25-Jan-2027", date: "25-Jan-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "29-Jan-2027", status: "pending", notes: "" },
-    { id: "1-Feb-2027", date: "1-Feb-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "5-Feb-2027", status: "pending", notes: "" }
+    { id: "16-Mar-2026", date: "16-Mar-2026", totalRent: 750, iPaid: 750, roommatePaid: 385, netPaid: 365, roommatePaidOn: "20-Mar-2026", status: "paid", notes: "" }
 ];
 
 const THEME_KEY = 'hurstville_theme';
@@ -76,25 +30,24 @@ let currentData = [];
 let db = null;
 let isFirebaseConfigured = false;
 let unsubscribe = null;
+let isLoading = false;
 
 // ===== FIREBASE INITIALIZATION =====
 const initFirebase = () => {
     try {
-        // Check if Firebase config is set
-        if (firebaseConfig.apiKey === 'YOUR_API_KEY' || !firebaseConfig.apiKey) {
-            console.warn('Firebase not configured - using localStorage fallback');
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+            console.warn('Firebase not configured - using localStorage');
             showFirebaseNotice();
             return false;
         }
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         isFirebaseConfigured = true;
-        console.log('Firebase initialized successfully');
+        console.log('✅ Firebase initialized');
         return true;
     } catch (error) {
-        console.error('Firebase initialization error:', error);
+        console.error('❌ Firebase error:', error);
         showFirebaseNotice();
         return false;
     }
@@ -111,6 +64,32 @@ const dismissFirebaseNotice = () => {
     localStorage.setItem('firebaseNoticeDismissed', 'true');
 };
 
+// ===== SEED INITIAL DATA TO FIREBASE =====
+const seedInitialData = async () => {
+    if (!isFirebaseConfigured || !db) return;
+    
+    try {
+        const snapshot = await db.collection('rentEntries').get();
+        
+        // Only seed if collection is empty
+        if (snapshot.empty) {
+            console.log('📥 Seeding initial data to Firebase...');
+            const batch = db.batch();
+            
+            defaultData.forEach(entry => {
+                const docRef = db.collection('rentEntries').doc(entry.id);
+                batch.set(docRef, entry);
+            });
+            
+            await batch.commit();
+            console.log('✅ Initial data seeded successfully');
+            showToast('Initial data loaded', 'success');
+        }
+    } catch (error) {
+        console.error('❌ Error seeding ', error);
+    }
+};
+
 // ===== REAL-TIME DATA SYNC =====
 const syncData = () => {
     if (!isFirebaseConfigured || !db) {
@@ -120,6 +99,9 @@ const syncData = () => {
     
     const loadingState = document.getElementById('loadingState');
     if (loadingState) loadingState.style.display = 'block';
+    
+    // Seed initial data if needed
+    seedInitialData();
     
     const rentCollection = db.collection('rentEntries');
     
@@ -140,12 +122,14 @@ const syncData = () => {
             renderTable(currentData);
             
             if (loadingState) loadingState.style.display = 'none';
-            console.log('Data synced from Firebase:', currentData.length, 'entries');
+            isLoading = false;
+            console.log(`✅ Synced ${currentData.length} entries from Firebase`);
         },
         (error) => {
-            console.error('Error syncing data:', error);
-            showToast('Sync error - using local data', 'error');
+            console.error('❌ Sync error:', error);
+            showToast('Using local data', 'warning');
             if (loadingState) loadingState.style.display = 'none';
+            isLoading = false;
             loadDataFromLocalStorage();
         }
     );
@@ -157,11 +141,11 @@ const saveToFirebase = async (data) => {
     try {
         const rentCollection = db.collection('rentEntries');
         await rentCollection.doc(data.id).set(data);
-        console.log('Entry saved to Firebase:', data.id);
+        console.log('✅ Saved to Firebase:', data.id);
         return true;
     } catch (error) {
-        console.error('Error saving to Firebase:', error);
-        showToast('Failed to sync to cloud', 'error');
+        console.error('❌ Save error:', error);
+        showToast('Save failed - check console', 'error');
         return false;
     }
 };
@@ -172,11 +156,11 @@ const updateInFirebase = async (id, data) => {
     try {
         const rentCollection = db.collection('rentEntries');
         await rentCollection.doc(id).update(data);
-        console.log('Entry updated in Firebase:', id);
+        console.log('✅ Updated in Firebase:', id);
         return true;
     } catch (error) {
-        console.error('Error updating Firebase:', error);
-        showToast('Failed to sync update', 'error');
+        console.error('❌ Update error:', error);
+        showToast('Update failed', 'error');
         return false;
     }
 };
@@ -187,11 +171,11 @@ const deleteFromFirebase = async (id) => {
     try {
         const rentCollection = db.collection('rentEntries');
         await rentCollection.doc(id).delete();
-        console.log('Entry deleted from Firebase:', id);
+        console.log('✅ Deleted from Firebase:', id);
         return true;
     } catch (error) {
-        console.error('Error deleting from Firebase:', error);
-        showToast('Failed to sync delete', 'error');
+        console.error('❌ Delete error:', error);
+        showToast('Delete failed', 'error');
         return false;
     }
 };
@@ -204,18 +188,29 @@ const loadDataFromLocalStorage = () => {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed) && parsed.length > 0) {
                 currentData = parsed;
-                console.log('Data loaded from localStorage:', currentData.length, 'entries');
+                console.log(`✅ Loaded ${currentData.length} entries from localStorage`);
+                renderSummary(currentData);
+                populateMonthFilter(currentData);
+                renderTable(currentData);
                 return true;
             }
         }
+        
+        // Use default data if nothing in localStorage
         currentData = [...defaultData];
         saveToLocalStorage();
-        console.log('Using default data:', currentData.length, 'entries');
+        console.log(`✅ Using ${currentData.length} default entries`);
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
         return false;
     } catch (e) {
-        console.error('Error loading data:', e);
+        console.error('❌ Load error:', e);
         currentData = [...defaultData];
         saveToLocalStorage();
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
         return false;
     }
 };
@@ -223,11 +218,10 @@ const loadDataFromLocalStorage = () => {
 const saveToLocalStorage = () => {
     try {
         localStorage.setItem('hurstville_rent_data_local', JSON.stringify(currentData));
-        console.log('Data saved to localStorage:', currentData.length, 'entries');
+        console.log('✅ Saved to localStorage');
         return true;
     } catch (e) {
-        console.error('Error saving data:', e);
-        showToast('Failed to save data', 'error');
+        console.error('❌ Save error:', e);
         return false;
     }
 };
@@ -264,7 +258,7 @@ const exportData = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Data exported successfully!', 'success');
+    showToast('Data exported!', 'success');
 };
 
 const importData = (event) => {
@@ -278,7 +272,6 @@ const importData = (event) => {
             if (Array.isArray(imported)) {
                 currentData = imported;
                 
-                // Save to Firebase if configured, otherwise localStorage
                 if (isFirebaseConfigured) {
                     showToast('Importing to cloud...', 'loading');
                     const rentCollection = db.collection('rentEntries');
@@ -295,12 +288,12 @@ const importData = (event) => {
                 renderSummary(currentData);
                 populateMonthFilter(currentData);
                 renderTable(currentData);
-                showToast('Data imported successfully!', 'success');
+                showToast('Data imported!', 'success');
             } else {
-                showToast('Invalid data format', 'error');
+                showToast('Invalid format', 'error');
             }
         } catch (err) {
-            showToast('Failed to import data', 'error');
+            showToast('Import failed', 'error');
         }
     };
     reader.readAsText(file);
@@ -569,6 +562,9 @@ window.closeEditModal = function() {
 
 window.saveNewEntry = async function(e) {
     if (e) e.preventDefault();
+    if (isLoading) return;
+    
+    isLoading = true;
     
     const entryDate = document.getElementById('entryDate');
     const entryTotalRent = document.getElementById('entryTotalRent');
@@ -578,7 +574,8 @@ window.saveNewEntry = async function(e) {
     const entryNotes = document.getElementById('entryNotes');
     
     if (!entryDate || !entryDate.value) {
-        showToast('Please select a date', 'error');
+        showToast('Select a date', 'error');
+        isLoading = false;
         return;
     }
     
@@ -604,25 +601,33 @@ window.saveNewEntry = async function(e) {
     
     const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
-    // Save to Firebase if configured, otherwise localStorage
-    if (isFirebaseConfigured) {
-        showToast('Saving to cloud...', 'loading');
-        await saveToFirebase(newEntry);
-    } else {
-        currentData.push(newEntry);
-        currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
-        saveToLocalStorage();
+    try {
+        if (isFirebaseConfigured) {
+            await saveToFirebase(newEntry);
+        } else {
+            currentData.push(newEntry);
+            currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+            saveToLocalStorage();
+        }
+        
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeAddModal();
+        showToast('Entry saved!', 'success');
+    } catch (error) {
+        console.error('Save error:', error);
+        showToast('Save failed', 'error');
     }
     
-    renderSummary(currentData);
-    populateMonthFilter(currentData);
-    renderTable(currentData);
-    window.closeAddModal();
-    showToast('Entry saved!', 'success');
+    isLoading = false;
 };
 
 window.updateEntry = async function(e) {
     if (e) e.preventDefault();
+    if (isLoading) return;
+    
+    isLoading = true;
     
     const editEntryId = document.getElementById('editEntryId');
     const editDate = document.getElementById('editDate');
@@ -633,7 +638,8 @@ window.updateEntry = async function(e) {
     const editNotes = document.getElementById('editNotes');
     
     if (!editEntryId || !editEntryId.value) {
-        showToast('Entry ID not found', 'error');
+        showToast('Entry ID missing', 'error');
+        isLoading = false;
         return;
     }
     
@@ -641,11 +647,13 @@ window.updateEntry = async function(e) {
     const index = currentData.findIndex(item => item.id === id);
     if (index === -1) {
         showToast('Entry not found', 'error');
+        isLoading = false;
         return;
     }
     
     if (!editDate || !editDate.value) {
-        showToast('Please select a date', 'error');
+        showToast('Select a date', 'error');
+        isLoading = false;
         return;
     }
     
@@ -671,20 +679,25 @@ window.updateEntry = async function(e) {
     
     const updatedData = { date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
-    // Update in Firebase if configured, otherwise localStorage
-    if (isFirebaseConfigured) {
-        showToast('Updating cloud...', 'loading');
-        await updateInFirebase(id, updatedData);
-    } else {
-        currentData[index] = { ...currentData[index], ...updatedData };
-        saveToLocalStorage();
+    try {
+        if (isFirebaseConfigured) {
+            await updateInFirebase(id, updatedData);
+        } else {
+            currentData[index] = { ...currentData[index], ...updatedData };
+            saveToLocalStorage();
+        }
+        
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeEditModal();
+        showToast('Entry updated!', 'success');
+    } catch (error) {
+        console.error('Update error:', error);
+        showToast('Update failed', 'error');
     }
     
-    renderSummary(currentData);
-    populateMonthFilter(currentData);
-    renderTable(currentData);
-    window.closeEditModal();
-    showToast('Entry updated!', 'success');
+    isLoading = false;
 };
 
 let deleteTargetId = null;
@@ -702,41 +715,45 @@ window.closeDeleteModal = function() {
 };
 
 window.executeDelete = async function() {
-    if (!deleteTargetId) return;
+    if (!deleteTargetId || isLoading) return;
     
-    // Delete from Firebase if configured, otherwise localStorage
-    if (isFirebaseConfigured) {
-        showToast('Deleting from cloud...', 'loading');
-        await deleteFromFirebase(deleteTargetId);
-    } else {
-        const index = currentData.findIndex(item => item.id === deleteTargetId);
-        if (index === -1) {
-            showToast('Entry not found', 'error');
-            window.closeDeleteModal();
-            return;
+    isLoading = true;
+    
+    try {
+        if (isFirebaseConfigured) {
+            await deleteFromFirebase(deleteTargetId);
+        } else {
+            const index = currentData.findIndex(item => item.id === deleteTargetId);
+            if (index === -1) {
+                showToast('Entry not found', 'error');
+                window.closeDeleteModal();
+                isLoading = false;
+                return;
+            }
+            currentData.splice(index, 1);
+            saveToLocalStorage();
         }
-        currentData.splice(index, 1);
-        saveToLocalStorage();
+        
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeDeleteModal();
+        showToast('Entry deleted', 'success');
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast('Delete failed', 'error');
     }
     
-    renderSummary(currentData);
-    populateMonthFilter(currentData);
-    renderTable(currentData);
-    window.closeDeleteModal();
-    showToast('Entry deleted', 'success');
+    isLoading = false;
 };
 
 // ===== SETUP EVENT LISTENERS =====
 const setupEventListeners = () => {
     const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
-    }
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
     
     const btnDismissNotice = document.getElementById('btnDismissNotice');
-    if (btnDismissNotice) {
-        btnDismissNotice.addEventListener('click', dismissFirebaseNotice);
-    }
+    if (btnDismissNotice) btnDismissNotice.addEventListener('click', dismissFirebaseNotice);
     
     const btnAddEntry = document.getElementById('btnAddEntry');
     if (btnAddEntry) btnAddEntry.addEventListener('click', window.openAddModal);
@@ -828,28 +845,13 @@ const setupEventListeners = () => {
 const init = async () => {
     initTheme();
     
-    // Check if Firebase notice was dismissed
     const noticeDismissed = localStorage.getItem('firebaseNoticeDismissed');
-    if (!noticeDismissed) {
-        const firebaseConfigured = initFirebase();
-        if (firebaseConfigured) {
-            syncData(); // Real-time sync
-        } else {
-            loadDataFromLocalStorage();
-            renderSummary(currentData);
-            populateMonthFilter(currentData);
-            renderTable(currentData);
-        }
+    const firebaseConfigured = initFirebase();
+    
+    if (firebaseConfigured) {
+        syncData();
     } else {
-        const firebaseConfigured = initFirebase();
-        if (firebaseConfigured) {
-            syncData();
-        } else {
-            loadDataFromLocalStorage();
-            renderSummary(currentData);
-            populateMonthFilter(currentData);
-            renderTable(currentData);
-        }
+        loadDataFromLocalStorage();
     }
     
     const modalOverlay = document.getElementById('modalOverlay');
