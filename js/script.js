@@ -1,7 +1,18 @@
 /**
  * Rent Tracker - Hurstville
- * With permanent data storage via localStorage + Export/Import
+ * With Firebase Firestore for real-time multi-user sync
  */
+
+// ===== FIREBASE CONFIGURATION =====
+// TODO: Replace with your Firebase project config from Firebase Console
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
 // ===== PRE-LOADED DATA (From Rent for Hurstville.xlsx) =====
 const defaultData = [
@@ -61,9 +72,166 @@ const defaultData = [
     { id: "1-Feb-2027", date: "1-Feb-2027", totalRent: 750, iPaid: null, roommatePaid: null, netPaid: 0, roommatePaidOn: "5-Feb-2027", status: "pending", notes: "" }
 ];
 
-const STORAGE_KEY = 'hurstville_rent_data_v2';
 const THEME_KEY = 'hurstville_theme';
 let currentData = [];
+let db = null;
+let isFirebaseConfigured = false;
+let unsubscribe = null;
+
+// ===== FIREBASE INITIALIZATION =====
+const initFirebase = () => {
+    try {
+        // Check if Firebase config is set
+        if (firebaseConfig.apiKey === 'YOUR_API_KEY' || !firebaseConfig.apiKey) {
+            console.warn('Firebase not configured - using localStorage fallback');
+            showFirebaseNotice();
+            return false;
+        }
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        isFirebaseConfigured = true;
+        console.log('Firebase initialized successfully');
+        return true;
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        showFirebaseNotice();
+        return false;
+    }
+};
+
+const showFirebaseNotice = () => {
+    const notice = document.getElementById('firebaseNotice');
+    if (notice) notice.style.display = 'block';
+};
+
+const dismissFirebaseNotice = () => {
+    const notice = document.getElementById('firebaseNotice');
+    if (notice) notice.style.display = 'none';
+    localStorage.setItem('firebaseNoticeDismissed', 'true');
+};
+
+// ===== REAL-TIME DATA SYNC =====
+const syncData = () => {
+    if (!isFirebaseConfigured || !db) {
+        loadDataFromLocalStorage();
+        return;
+    }
+    
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) loadingState.style.display = 'block';
+    
+    const rentCollection = db.collection('rentEntries');
+    
+    // Listen for real-time updates
+    unsubscribe = rentCollection.onSnapshot(
+        (snapshot) => {
+            const data = [];
+            snapshot.forEach((doc) => {
+                data.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Sort by date
+            data.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+            
+            currentData = data;
+            renderSummary(currentData);
+            populateMonthFilter(currentData);
+            renderTable(currentData);
+            
+            if (loadingState) loadingState.style.display = 'none';
+            console.log('Data synced from Firebase:', currentData.length, 'entries');
+        },
+        (error) => {
+            console.error('Error syncing ', error);
+            showToast('Sync error - using local data', 'error');
+            if (loadingState) loadingState.style.display = 'none';
+            loadDataFromLocalStorage();
+        }
+    );
+};
+
+const saveToFirebase = async (data) => {
+    if (!isFirebaseConfigured || !db) return false;
+    
+    try {
+        const rentCollection = db.collection('rentEntries');
+        await rentCollection.doc(data.id).set(data);
+        console.log('Entry saved to Firebase:', data.id);
+        return true;
+    } catch (error) {
+        console.error('Error saving to Firebase:', error);
+        showToast('Failed to sync to cloud', 'error');
+        return false;
+    }
+};
+
+const updateInFirebase = async (id, data) => {
+    if (!isFirebaseConfigured || !db) return false;
+    
+    try {
+        const rentCollection = db.collection('rentEntries');
+        await rentCollection.doc(id).update(data);
+        console.log('Entry updated in Firebase:', id);
+        return true;
+    } catch (error) {
+        console.error('Error updating Firebase:', error);
+        showToast('Failed to sync update', 'error');
+        return false;
+    }
+};
+
+const deleteFromFirebase = async (id) => {
+    if (!isFirebaseConfigured || !db) return false;
+    
+    try {
+        const rentCollection = db.collection('rentEntries');
+        await rentCollection.doc(id).delete();
+        console.log('Entry deleted from Firebase:', id);
+        return true;
+    } catch (error) {
+        console.error('Error deleting from Firebase:', error);
+        showToast('Failed to sync delete', 'error');
+        return false;
+    }
+};
+
+// ===== LOCALSTORAGE FALLBACK =====
+const loadDataFromLocalStorage = () => {
+    try {
+        const stored = localStorage.getItem('hurstville_rent_data_local');
+        if (stored && stored.trim() !== '') {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                currentData = parsed;
+                console.log('Data loaded from localStorage:', currentData.length, 'entries');
+                return true;
+            }
+        }
+        currentData = [...defaultData];
+        saveToLocalStorage();
+        console.log('Using default data:', currentData.length, 'entries');
+        return false;
+    } catch (e) {
+        console.error('Error loading ', e);
+        currentData = [...defaultData];
+        saveToLocalStorage();
+        return false;
+    }
+};
+
+const saveToLocalStorage = () => {
+    try {
+        localStorage.setItem('hurstville_rent_data_local', JSON.stringify(currentData));
+        console.log('Data saved to localStorage:', currentData.length, 'entries');
+        return true;
+    } catch (e) {
+        console.error('Error saving ', e);
+        showToast('Failed to save data', 'error');
+        return false;
+    }
+};
 
 // ===== THEME TOGGLE =====
 const initTheme = () => {
@@ -83,42 +251,6 @@ const toggleTheme = () => {
     
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
-};
-
-// ===== LOAD/SAVE DATA =====
-const loadData = () => {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored && stored.trim() !== '') {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                currentData = parsed;
-                console.log('Data loaded from localStorage:', currentData.length, 'entries');
-                return true;
-            }
-        }
-        currentData = [...defaultData];
-        saveData();
-        console.log('Using default data:', currentData.length, 'entries');
-        return false;
-    } catch (e) {
-        console.error('Error loading ', e);
-        currentData = [...defaultData];
-        saveData();
-        return false;
-    }
-};
-
-const saveData = () => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-        console.log('Data saved to localStorage:', currentData.length, 'entries');
-        return true;
-    } catch (e) {
-        console.error('Error saving ', e);
-        showToast('Failed to save data', 'error');
-        return false;
-    }
 };
 
 // ===== EXPORT/IMPORT DATA =====
@@ -141,12 +273,26 @@ const importData = (event) => {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const imported = JSON.parse(e.target.result);
             if (Array.isArray(imported)) {
                 currentData = imported;
-                saveData();
+                
+                // Save to Firebase if configured, otherwise localStorage
+                if (isFirebaseConfigured) {
+                    showToast('Importing to cloud...', 'loading');
+                    const rentCollection = db.collection('rentEntries');
+                    const batch = db.batch();
+                    imported.forEach(entry => {
+                        const docRef = rentCollection.doc(entry.id);
+                        batch.set(docRef, entry);
+                    });
+                    await batch.commit();
+                } else {
+                    saveToLocalStorage();
+                }
+                
                 renderSummary(currentData);
                 populateMonthFilter(currentData);
                 renderTable(currentData);
@@ -213,9 +359,11 @@ const showToast = (message, type = 'success') => {
     if (type) toast.classList.add(type);
     toast.style.display = 'flex';
     
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 3000);
+    if (type !== 'loading') {
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
+    }
 };
 
 // ===== RENDER FUNCTIONS =====
@@ -420,7 +568,7 @@ window.closeEditModal = function() {
     if (editEntryForm) editEntryForm.reset();
 };
 
-window.saveNewEntry = function(e) {
+window.saveNewEntry = async function(e) {
     if (e) e.preventDefault();
     
     const entryDate = document.getElementById('entryDate');
@@ -455,18 +603,26 @@ window.saveNewEntry = function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
-    currentData.push({ id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes });
-    currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+    const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
-    saveData();
+    // Save to Firebase if configured, otherwise localStorage
+    if (isFirebaseConfigured) {
+        showToast('Saving to cloud...', 'loading');
+        await saveToFirebase(newEntry);
+    } else {
+        currentData.push(newEntry);
+        currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+        saveToLocalStorage();
+    }
+    
     renderSummary(currentData);
     populateMonthFilter(currentData);
     renderTable(currentData);
     window.closeAddModal();
-    showToast('Entry saved permanently!', 'success');
+    showToast('Entry saved!', 'success');
 };
 
-window.updateEntry = function(e) {
+window.updateEntry = async function(e) {
     if (e) e.preventDefault();
     
     const editEntryId = document.getElementById('editEntryId');
@@ -514,9 +670,17 @@ window.updateEntry = function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
-    currentData[index] = { ...currentData[index], date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
+    const updatedData = { date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
-    saveData();
+    // Update in Firebase if configured, otherwise localStorage
+    if (isFirebaseConfigured) {
+        showToast('Updating cloud...', 'loading');
+        await updateInFirebase(id, updatedData);
+    } else {
+        currentData[index] = { ...currentData[index], ...updatedData };
+        saveToLocalStorage();
+    }
+    
     renderSummary(currentData);
     populateMonthFilter(currentData);
     renderTable(currentData);
@@ -538,18 +702,24 @@ window.closeDeleteModal = function() {
     deleteTargetId = null;
 };
 
-window.executeDelete = function() {
+window.executeDelete = async function() {
     if (!deleteTargetId) return;
     
-    const index = currentData.findIndex(item => item.id === deleteTargetId);
-    if (index === -1) {
-        showToast('Entry not found', 'error');
-        window.closeDeleteModal();
-        return;
+    // Delete from Firebase if configured, otherwise localStorage
+    if (isFirebaseConfigured) {
+        showToast('Deleting from cloud...', 'loading');
+        await deleteFromFirebase(deleteTargetId);
+    } else {
+        const index = currentData.findIndex(item => item.id === deleteTargetId);
+        if (index === -1) {
+            showToast('Entry not found', 'error');
+            window.closeDeleteModal();
+            return;
+        }
+        currentData.splice(index, 1);
+        saveToLocalStorage();
     }
     
-    currentData.splice(index, 1);
-    saveData();
     renderSummary(currentData);
     populateMonthFilter(currentData);
     renderTable(currentData);
@@ -562,6 +732,11 @@ const setupEventListeners = () => {
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
+    }
+    
+    const btnDismissNotice = document.getElementById('btnDismissNotice');
+    if (btnDismissNotice) {
+        btnDismissNotice.addEventListener('click', dismissFirebaseNotice);
     }
     
     const btnAddEntry = document.getElementById('btnAddEntry');
@@ -651,8 +826,32 @@ const setupEventListeners = () => {
 };
 
 // ===== INITIALIZE =====
-const init = () => {
+const init = async () => {
     initTheme();
+    
+    // Check if Firebase notice was dismissed
+    const noticeDismissed = localStorage.getItem('firebaseNoticeDismissed');
+    if (!noticeDismissed) {
+        const firebaseConfigured = initFirebase();
+        if (firebaseConfigured) {
+            syncData(); // Real-time sync
+        } else {
+            loadDataFromLocalStorage();
+            renderSummary(currentData);
+            populateMonthFilter(currentData);
+            renderTable(currentData);
+        }
+    } else {
+        const firebaseConfigured = initFirebase();
+        if (firebaseConfigured) {
+            syncData();
+        } else {
+            loadDataFromLocalStorage();
+            renderSummary(currentData);
+            populateMonthFilter(currentData);
+            renderTable(currentData);
+        }
+    }
     
     const modalOverlay = document.getElementById('modalOverlay');
     const editModalOverlay = document.getElementById('editModalOverlay');
@@ -665,10 +864,6 @@ const init = () => {
     if (toast) toast.style.display = 'none';
     
     setupEventListeners();
-    loadData();
-    renderSummary(currentData);
-    populateMonthFilter(currentData);
-    renderTable(currentData);
 };
 
 if (document.readyState === 'loading') {
