@@ -77,6 +77,7 @@ body {
 
 .toast.error { border-left-color: var(--danger); }
 .toast.warning { border-left-color: var(--warning); }
+.toast.loading { border-left-color: var(--primary); }
 
 .toast-close {
     background: none;
@@ -89,6 +90,66 @@ body {
 }
 
 .toast-close:hover { color: var(--text-primary); }
+
+/* ===== LOADING STATE ===== */
+.loading-state {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== FIREBASE NOTICE ===== */
+.firebase-notice {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-lg);
+}
+
+.firebase-notice h3 {
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.firebase-notice ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.firebase-notice li {
+    margin-bottom: 0.5rem;
+}
+
+.firebase-notice a {
+    color: white;
+    text-decoration: underline;
+}
+
+.firebase-notice code {
+    background: rgba(255,255,255,0.2);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
 
 /* ===== HEADER ===== */
 .header {
@@ -717,7 +778,7 @@ body {
 /* ===== PRINT ===== */
 @media print {
     .header { background: white; color: black; }
-    .controls, .footer, .btn-export, .btn-add, .btn-action, .toast, .theme-toggle { display: none; }
+    .controls, .footer, .btn-export, .btn-add, .btn-action, .toast, .theme-toggle, .firebase-notice, .loading-state { display: none; }
     .summary-card, .table-container { box-shadow: none; border: 1px solid #ccc; }
     body { background: white; }
 }
