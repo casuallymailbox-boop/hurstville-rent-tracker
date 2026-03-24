@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <header class="header">
@@ -40,6 +43,12 @@
         <div id="toast" class="toast" style="display: none;">
             <span id="toastMessage"></span>
             <button class="toast-close" id="toastClose">&times;</button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state" style="display: none;">
+            <div class="spinner"></div>
+            <p>Syncing data...</p>
         </div>
 
         <!-- Summary Cards -->
@@ -129,6 +138,20 @@
                 </svg>
                 <span>Add First Entry</span>
             </button>
+        </div>
+
+        <!-- Firebase Setup Notice -->
+        <div id="firebaseNotice" class="firebase-notice" style="display: none;">
+            <h3>🔥 Firebase Setup Required</h3>
+            <p>To enable real-time sync across all users, you need to configure Firebase.</p>
+            <ol>
+                <li>Go to <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+                <li>Create a new project (free)</li>
+                <li>Add a web app and copy the config</li>
+                <li>Update the Firebase config in <code>js/script.js</code></li>
+                <li>Enable Firestore Database (test mode to start)</li>
+            </ol>
+            <button class="btn-save" id="btnDismissNotice">I'll Set It Up Later</button>
         </div>
     </main>
 
@@ -263,7 +286,7 @@
     </div>
 
     <footer class="footer">
-        <p>Hurstville Rent Tracker • Data stored locally in your browser</p>
+        <p>Hurstville Rent Tracker • Real-time sync via Firebase • Data stored in Google Cloud</p>
     </footer>
 
     <script src="js/script.js"></script>
