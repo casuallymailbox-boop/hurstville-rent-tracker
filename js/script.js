@@ -1,6 +1,6 @@
 /**
  * Rent Tracker - Hurstville
- * With Firebase Firestore for real-time multi-user sync
+ * Bulletproof version with Firebase + localStorage fallback
  */
 
 // ===== FIREBASE CONFIGURATION =====
@@ -13,7 +13,7 @@ const firebaseConfig = {
   appId: "1:150128012794:web:46a8b44d5e332346ccc843"
 };
 
-// ===== PRE-LOADED DATA (From Rent for Hurstville.xlsx) =====
+// ===== PRE-LOADED DATA =====
 const defaultData = [
     { id: "27-Jan-2026", date: "27-Jan-2026", totalRent: 750, iPaid: 750, roommatePaid: 0, netPaid: 750, roommatePaidOn: null, status: "paid", notes: "Bond/Deposit/Advance paid" },
     { id: "2-Feb-2026", date: "2-Feb-2026", totalRent: 750, iPaid: 750, roommatePaid: null, netPaid: 750, roommatePaidOn: null, status: "paid", notes: "Roommate Electricity $770" },
@@ -72,29 +72,56 @@ const defaultData = [
 ];
 
 const THEME_KEY = 'hurstville_theme';
+const STORAGE_KEY = 'hurstville_rent_data_v3';
 let currentData = [];
 let db = null;
 let isFirebaseConfigured = false;
 let unsubscribe = null;
 let isInitialized = false;
 
+// ===== DEBUG LOGGING =====
+const log = {
+    info: (msg, data) => console.log(`📝 [INFO] ${msg}`, data || ''),
+    success: (msg, data) => console.log(`✅ [SUCCESS] ${msg}`, data || ''),
+    error: (msg, data) => console.error(`❌ [ERROR] ${msg}`, data || ''),
+    warn: (msg, data) => console.warn(`⚠️ [WARN] ${msg}`, data || '')
+};
+
 // ===== FIREBASE INITIALIZATION =====
 const initFirebase = () => {
+    log.info('Initializing Firebase...');
+    
     try {
-        if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
-            console.warn('⚠️ Firebase not configured');
+        // Check if Firebase SDK is loaded
+        if (typeof firebase === 'undefined') {
+            log.error('Firebase SDK not loaded!');
             showFirebaseNotice();
             return false;
         }
         
+        // Check config
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+            log.error('Firebase config missing');
+            showFirebaseNotice();
+            return false;
+        }
+        
+        // Initialize
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
-        db.settings({ persistence: true });
+        
+        // Enable offline persistence
+        db.settings({
+            persistence: true,
+            cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+        });
+        
         isFirebaseConfigured = true;
-        console.log('✅ Firebase initialized');
+        log.success('Firebase initialized successfully');
         return true;
+        
     } catch (error) {
-        console.error('❌ Firebase error:', error.message);
+        log.error('Firebase initialization failed:', error.message);
         showFirebaseNotice();
         return false;
     }
@@ -113,13 +140,17 @@ const dismissFirebaseNotice = () => {
 
 // ===== SEED INITIAL DATA =====
 const seedInitialData = async () => {
-    if (!isFirebaseConfigured || !db) return;
+    if (!isFirebaseConfigured || !db) {
+        log.warn('Cannot seed - Firebase not configured');
+        return;
+    }
     
     try {
+        log.info('Checking if data needs seeding...');
         const snapshot = await db.collection('rentEntries').limit(1).get();
         
         if (snapshot.empty) {
-            console.log('📥 Seeding initial data...');
+            log.info('Seeding initial data to Firebase...');
             const batch = db.batch();
             
             defaultData.forEach(entry => {
@@ -128,16 +159,19 @@ const seedInitialData = async () => {
             });
             
             await batch.commit();
-            console.log('✅ Initial data seeded');
+            log.success('Initial data seeded successfully');
+        } else {
+            log.info('Data already exists in Firebase');
         }
     } catch (error) {
-        console.error('❌ Seed error:', error);
+        log.error('Seed failed:', error.message);
     }
 };
 
 // ===== REAL-TIME SYNC =====
 const syncData = () => {
     if (!isFirebaseConfigured || !db) {
+        log.warn('Using localStorage fallback');
         loadDataFromLocalStorage();
         return;
     }
@@ -145,9 +179,12 @@ const syncData = () => {
     const loadingState = document.getElementById('loadingState');
     if (loadingState) loadingState.style.display = 'block';
     
+    // Seed if needed
     seedInitialData();
     
     const rentCollection = db.collection('rentEntries');
+    
+    log.info('Setting up real-time listener...');
     
     unsubscribe = rentCollection.onSnapshot(
         (snapshot) => {
@@ -159,15 +196,16 @@ const syncData = () => {
             data.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
             
             currentData = data;
+            log.success(`Synced ${currentData.length} entries from Firebase`);
+            
             renderSummary(currentData);
             populateMonthFilter(currentData);
             renderTable(currentData);
             
             if (loadingState) loadingState.style.display = 'none';
-            console.log(`✅ Synced ${currentData.length} entries`);
         },
         (error) => {
-            console.error('❌ Sync error:', error);
+            log.error('Sync error:', error.message);
             showToast('Using local data', 'warning');
             if (loadingState) loadingState.style.display = 'none';
             loadDataFromLocalStorage();
@@ -175,15 +213,32 @@ const syncData = () => {
     );
 };
 
+// ===== FIREBASE OPERATIONS WITH TIMEOUT =====
+const withTimeout = (promise, ms = 10000) => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timed out')), ms)
+        )
+    ]);
+};
+
 const saveToFirebase = async (data) => {
-    if (!isFirebaseConfigured || !db) return false;
+    if (!isFirebaseConfigured || !db) {
+        log.warn('Firebase not available for save');
+        return false;
+    }
     
     try {
-        await db.collection('rentEntries').doc(data.id).set(data);
-        console.log('✅ Saved:', data.id);
+        log.info('Saving to Firebase:', data.id);
+        await withTimeout(
+            db.collection('rentEntries').doc(data.id).set(data),
+            10000
+        );
+        log.success('Saved to Firebase:', data.id);
         return true;
     } catch (error) {
-        console.error('❌ Save error:', error);
+        log.error('Firebase save failed:', error.message);
         throw error;
     }
 };
@@ -192,11 +247,15 @@ const updateInFirebase = async (id, data) => {
     if (!isFirebaseConfigured || !db) return false;
     
     try {
-        await db.collection('rentEntries').doc(id).update(data);
-        console.log('✅ Updated:', id);
+        log.info('Updating in Firebase:', id);
+        await withTimeout(
+            db.collection('rentEntries').doc(id).update(data),
+            10000
+        );
+        log.success('Updated in Firebase:', id);
         return true;
     } catch (error) {
-        console.error('❌ Update error:', error);
+        log.error('Firebase update failed:', error.message);
         throw error;
     }
 };
@@ -205,37 +264,43 @@ const deleteFromFirebase = async (id) => {
     if (!isFirebaseConfigured || !db) return false;
     
     try {
-        await db.collection('rentEntries').doc(id).delete();
-        console.log('✅ Deleted:', id);
+        log.info('Deleting from Firebase:', id);
+        await withTimeout(
+            db.collection('rentEntries').doc(id).delete(),
+            10000
+        );
+        log.success('Deleted from Firebase:', id);
         return true;
     } catch (error) {
-        console.error('❌ Delete error:', error);
+        log.error('Firebase delete failed:', error.message);
         throw error;
     }
 };
 
-// ===== LOCALSTORAGE =====
+// ===== LOCALSTORAGE OPERATIONS =====
 const loadDataFromLocalStorage = () => {
     try {
-        const stored = localStorage.getItem('hurstville_rent_data_local');
+        log.info('Loading from localStorage...');
+        const stored = localStorage.getItem(STORAGE_KEY);
+        
         if (stored && stored.trim() !== '') {
             currentData = JSON.parse(stored);
-            console.log(`✅ Loaded ${currentData.length} from localStorage`);
+            log.success(`Loaded ${currentData.length} entries from localStorage`);
             renderSummary(currentData);
             populateMonthFilter(currentData);
             renderTable(currentData);
             return true;
         }
         
+        log.info('No localStorage data, using defaults');
         currentData = [...defaultData];
         saveToLocalStorage();
-        console.log(`✅ Using ${currentData.length} default entries`);
         renderSummary(currentData);
         populateMonthFilter(currentData);
         renderTable(currentData);
         return false;
     } catch (e) {
-        console.error('❌ Load error:', e);
+        log.error('localStorage load failed:', e.message);
         currentData = [...defaultData];
         saveToLocalStorage();
         renderSummary(currentData);
@@ -247,10 +312,11 @@ const loadDataFromLocalStorage = () => {
 
 const saveToLocalStorage = () => {
     try {
-        localStorage.setItem('hurstville_rent_data_local', JSON.stringify(currentData));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+        log.success('Saved to localStorage');
         return true;
     } catch (e) {
-        console.error('❌ Save error:', e);
+        log.error('localStorage save failed:', e.message);
         return false;
     }
 };
@@ -301,7 +367,7 @@ const importData = (event) => {
                 currentData = imported;
                 
                 if (isFirebaseConfigured) {
-                    showToast('Importing...', 'loading');
+                    showToast('Importing to cloud...', 'loading');
                     const batch = db.batch();
                     imported.forEach(entry => {
                         const docRef = db.collection('rentEntries').doc(entry.id);
@@ -318,6 +384,7 @@ const importData = (event) => {
                 showToast('Imported!', 'success');
             }
         } catch (err) {
+            log.error('Import failed:', err.message);
             showToast('Import failed', 'error');
         }
     };
@@ -527,12 +594,16 @@ const exportSummary = () => {
 
 // ===== MODAL FUNCTIONS =====
 window.openAddModal = function() {
+    log.info('Opening add modal');
     const modalOverlay = document.getElementById('modalOverlay');
     const addEntryForm = document.getElementById('addEntryForm');
     const entryDate = document.getElementById('entryDate');
     const entryTotalRent = document.getElementById('entryTotalRent');
     
-    if (!modalOverlay) return;
+    if (!modalOverlay) {
+        log.error('Modal overlay not found');
+        return;
+    }
     if (addEntryForm) addEntryForm.reset();
     if (entryDate) entryDate.valueAsDate = new Date();
     if (entryTotalRent) entryTotalRent.value = 750;
@@ -549,8 +620,12 @@ window.closeAddModal = function() {
 };
 
 window.openEditModal = function(id) {
+    log.info('Opening edit modal for:', id);
     const editModalOverlay = document.getElementById('editModalOverlay');
-    if (!editModalOverlay) return;
+    if (!editModalOverlay) {
+        log.error('Edit modal not found');
+        return;
+    }
     
     const entry = currentData.find(item => item.id === id);
     if (!entry) {
@@ -585,9 +660,16 @@ window.closeEditModal = function() {
     if (editEntryForm) editEntryForm.reset();
 };
 
+// ===== SAVE NEW ENTRY - BULLETPROOF VERSION =====
 window.saveNewEntry = async function(e) {
-    if (e) e.preventDefault();
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     
+    log.info('=== SAVE ENTRY STARTED ===');
+    
+    // Get form values
     const entryDate = document.getElementById('entryDate');
     const entryTotalRent = document.getElementById('entryTotalRent');
     const entryIPaid = document.getElementById('entryIPaid');
@@ -595,11 +677,14 @@ window.saveNewEntry = async function(e) {
     const entryRoommateDate = document.getElementById('entryRoommateDate');
     const entryNotes = document.getElementById('entryNotes');
     
+    // Validate
     if (!entryDate || !entryDate.value) {
+        log.error('No date selected');
         showToast('Select a date', 'error');
         return;
     }
     
+    // Build entry
     const totalRent = entryTotalRent && entryTotalRent.value ? parseFloat(entryTotalRent.value) : 750;
     const iPaid = entryIPaid && entryIPaid.value ? parseFloat(entryIPaid.value) : null;
     const roommatePaid = entryRoommatePaid && entryRoommatePaid.value ? parseFloat(entryRoommatePaid.value) : null;
@@ -620,30 +705,76 @@ window.saveNewEntry = async function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
-    const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
+    const newEntry = {
+        id: generateId(),
+        date,
+        totalRent,
+        iPaid,
+        roommatePaid,
+        netPaid,
+        roommatePaidOn,
+        status,
+        notes
+    };
+    
+    log.info('Entry to save:', newEntry);
     
     try {
         if (isFirebaseConfigured) {
-            await saveToFirebase(newEntry);
+            log.info('Saving to Firebase...');
+            showToast('Saving to cloud...', 'loading');
+            
+            const saved = await saveToFirebase(newEntry);
+            log.info('Firebase save result:', saved);
+            
+            if (!saved) {
+                throw new Error('Firebase save returned false');
+            }
         } else {
+            log.info('Saving to localStorage...');
+            showToast('Saving locally...', 'loading');
+            
             currentData.push(newEntry);
             currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
             saveToLocalStorage();
         }
         
+        // Refresh UI
+        log.info('Refreshing UI...');
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        
+        // Close modal
+        window.closeAddModal();
+        
+        log.success('=== SAVE ENTRY COMPLETED ===');
+        showToast('Entry saved!', 'success');
+        
+    } catch (error) {
+        log.error('Save failed:', error.message);
+        console.error('Full error:', error);
+        
+        // Fallback to localStorage
+        log.warn('Falling back to localStorage...');
+        currentData.push(newEntry);
+        currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+        saveToLocalStorage();
+        
         renderSummary(currentData);
         populateMonthFilter(currentData);
         renderTable(currentData);
         window.closeAddModal();
-        showToast('Entry saved!', 'success');
-    } catch (error) {
-        console.error('Save error:', error);
-        showToast('Save failed - check console', 'error');
+        
+        showToast('Saved locally (cloud failed)', 'warning');
     }
 };
 
+// ===== UPDATE ENTRY =====
 window.updateEntry = async function(e) {
     if (e) e.preventDefault();
+    
+    log.info('=== UPDATE ENTRY STARTED ===');
     
     const editEntryId = document.getElementById('editEntryId');
     const editDate = document.getElementById('editDate');
@@ -705,12 +836,23 @@ window.updateEntry = async function(e) {
         renderTable(currentData);
         window.closeEditModal();
         showToast('Entry updated!', 'success');
+        
+        log.success('=== UPDATE ENTRY COMPLETED ===');
     } catch (error) {
-        console.error('Update error:', error);
-        showToast('Update failed', 'error');
+        log.error('Update failed:', error.message);
+        
+        // Fallback
+        currentData[index] = { ...currentData[index], ...updatedData };
+        saveToLocalStorage();
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeEditModal();
+        showToast('Updated locally', 'warning');
     }
 };
 
+// ===== DELETE ENTRY =====
 let deleteTargetId = null;
 
 window.confirmDelete = function(id) {
@@ -727,6 +869,8 @@ window.closeDeleteModal = function() {
 
 window.executeDelete = async function() {
     if (!deleteTargetId) return;
+    
+    log.info('=== DELETE ENTRY STARTED ===');
     
     try {
         if (isFirebaseConfigured) {
@@ -747,14 +891,18 @@ window.executeDelete = async function() {
         renderTable(currentData);
         window.closeDeleteModal();
         showToast('Entry deleted', 'success');
+        
+        log.success('=== DELETE ENTRY COMPLETED ===');
     } catch (error) {
-        console.error('Delete error:', error);
+        log.error('Delete failed:', error.message);
         showToast('Delete failed', 'error');
     }
 };
 
 // ===== EVENT LISTENERS =====
 const setupEventListeners = () => {
+    log.info('Setting up event listeners...');
+    
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
     
@@ -762,7 +910,12 @@ const setupEventListeners = () => {
     if (btnDismissNotice) btnDismissNotice.addEventListener('click', dismissFirebaseNotice);
     
     const btnAddEntry = document.getElementById('btnAddEntry');
-    if (btnAddEntry) btnAddEntry.addEventListener('click', window.openAddModal);
+    if (btnAddEntry) {
+        btnAddEntry.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openAddModal();
+        });
+    }
     
     const btnAddFromEmpty = document.getElementById('btnAddFromEmpty');
     if (btnAddFromEmpty) btnAddFromEmpty.addEventListener('click', window.openAddModal);
@@ -800,7 +953,12 @@ const setupEventListeners = () => {
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', window.executeDelete);
     
     const addEntryForm = document.getElementById('addEntryForm');
-    if (addEntryForm) addEntryForm.addEventListener('submit', window.saveNewEntry);
+    if (addEntryForm) {
+        addEntryForm.addEventListener('submit', window.saveNewEntry);
+        log.info('Add form listener attached');
+    } else {
+        log.error('Add form not found!');
+    }
     
     const editEntryForm = document.getElementById('editEntryForm');
     if (editEntryForm) editEntryForm.addEventListener('submit', window.updateEntry);
@@ -845,16 +1003,24 @@ const setupEventListeners = () => {
             if (toast && toast.style.display === 'flex') toast.style.display = 'none';
         }
     });
+    
+    log.success('Event listeners setup complete');
 };
 
 // ===== INITIALIZE =====
 const init = async () => {
-    if (isInitialized) return;
+    if (isInitialized) {
+        log.warn('Already initialized');
+        return;
+    }
     isInitialized = true;
+    
+    log.info('=== APP INITIALIZING ===');
     
     initTheme();
     
     const firebaseConfigured = initFirebase();
+    log.info('Firebase configured:', firebaseConfigured);
     
     if (firebaseConfigured) {
         syncData();
@@ -873,6 +1039,8 @@ const init = async () => {
     if (toast) toast.style.display = 'none';
     
     setupEventListeners();
+    
+    log.success('=== APP INITIALIZED ===');
 };
 
 if (document.readyState === 'loading') {
