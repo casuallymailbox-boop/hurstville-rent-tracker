@@ -102,6 +102,20 @@
                     </svg>
                     <span>Restore</span>
                 </button>
+                <button class="btn-export" id="btnEditMyBond" title="Edit My Bond">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Edit My Bond</span>
+                </button>
+                <button class="btn-export" id="btnEditRoommateBond" title="Edit Roommate's Bond">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Edit Roommate Bond</span>
+                </button>
             </div>
         </section>
 
@@ -138,20 +152,6 @@
                 </svg>
                 <span>Add First Entry</span>
             </button>
-        </div>
-
-        <!-- Firebase Setup Notice -->
-        <div id="firebaseNotice" class="firebase-notice" style="display: none;">
-            <h3>🔥 Firebase Setup Required</h3>
-            <p>To enable real-time sync across all users, you need to configure Firebase.</p>
-            <ol>
-                <li>Go to <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
-                <li>Create a new project (free)</li>
-                <li>Add a web app and copy the config</li>
-                <li>Update the Firebase config in <code>js/script.js</code></li>
-                <li>Enable Firestore Database (test mode to start)</li>
-            </ol>
-            <button class="btn-save" id="btnDismissNotice">I'll Set It Up Later</button>
         </div>
     </main>
 
@@ -262,6 +262,55 @@
                     <div class="form-actions">
                         <button type="button" class="btn-cancel" id="btnCancelEdit">Cancel</button>
                         <button type="submit" class="btn-save">Update Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Notes Modal -->
+    <div class="modal-overlay" id="notesModalOverlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Entry Notes</h2>
+                <button class="btn-close" id="btnCloseNotesModal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="notesContent" class="notes-content">
+                    <!-- Notes will be displayed here -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="btnCancelNotes">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Bond Modal -->
+    <div class="modal-overlay" id="bondModalOverlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="bondModalTitle">Edit Bond</h2>
+                <button class="btn-close" id="btnCloseBondModal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="bondForm">
+                    <input type="hidden" id="bondType">
+                    <div class="form-group">
+                        <label for="bondAmount">Bond Amount ($)</label>
+                        <input type="number" id="bondAmount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="bondDate">Date Paid</label>
+                        <input type="date" id="bondDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="bondNotes">Notes (Optional)</label>
+                        <textarea id="bondNotes" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" id="btnCancelBond">Cancel</button>
+                        <button type="submit" class="btn-save">Save Bond</button>
                     </div>
                 </form>
             </div>
