@@ -76,7 +76,16 @@ const defaultData = [
 ];
 
 const THEME_KEY = 'hurstville_theme';
+const BOND_KEY = 'hurstville_bond_data';
 let currentData = [];
+let bondData = {
+    myBond: 3000,
+    myBondDate: '27-Jan-2026',
+    myBondNotes: 'Bond/Deposit/Advance',
+    roommateBond: 0,
+    roommateBondDate: null,
+    roommateBondNotes: ''
+};
 let unsubscribe = null;
 
 // ===== THEME =====
@@ -96,6 +105,31 @@ const toggleTheme = () => {
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
+};
+
+// ===== LOAD/SAVE BOND DATA =====
+const loadBondData = () => {
+    try {
+        const stored = localStorage.getItem(BOND_KEY);
+        if (stored) {
+            bondData = JSON.parse(stored);
+            console.log('✅ Bond data loaded');
+        }
+    } catch (e) {
+        console.error('❌ Bond load error:', e);
+    }
+};
+
+const saveBondData = async () => {
+    try {
+        localStorage.setItem(BOND_KEY, JSON.stringify(bondData));
+        
+        // Also save to Firebase
+        await db.collection('bondData').doc('main').set(bondData);
+        console.log('✅ Bond data saved');
+    } catch (e) {
+        console.error('❌ Bond save error:', e);
+    }
 };
 
 // ===== UTILITIES =====
@@ -157,7 +191,7 @@ const showToast = (message, type = 'success') => {
     }
 };
 
-// ===== RENDER SUMMARY WITH TOTAL PAYMENT DONE =====
+// ===== RENDER SUMMARY WITH ALL CARDS =====
 const renderSummary = (data) => {
     const summaryGrid = document.getElementById('summaryGrid');
     if (!summaryGrid) return;
@@ -192,6 +226,14 @@ const renderSummary = (data) => {
             <div class="value">${formatCurrency(netTotal)}</div>
         </div>
         <div class="summary-card">
+            <div class="label">Bond From Me</div>
+            <div class="value" style="color: var(--primary);">${formatCurrency(bondData.myBond)}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Bond From Roommate</div>
+            <div class="value" style="color: var(--primary);">${formatCurrency(bondData.roommateBond)}</div>
+        </div>
+        <div class="summary-card">
             <div class="label">Unpaid Weeks</div>
             <div class="value">${unpaidCount}</div>
         </div>
@@ -212,6 +254,11 @@ const renderTable = (data) => {
     if (emptyState) emptyState.style.display = 'none';
     
     tableBody.innerHTML = data.map((row) => {
+        const hasNotes = row.notes && row.notes.trim() !== '';
+        const infoButton = hasNotes ? 
+            `<button class="btn-action info" onclick="window.viewNotes('${row.id}')" title="View Notes">ℹ️</button>` : 
+            '<span style="color: var(--text-secondary); font-size: 0.75rem;">-</span>';
+        
         return `
         <tr>
             <td><strong>${formatDate(row.date)}</strong></td>
@@ -222,6 +269,7 @@ const renderTable = (data) => {
             <td><small>${formatDate(row.roommatePaidOn)}</small></td>
             <td>${getStatusBadge(row.status, row.roommatePaidOn, row.iPaid)}</td>
             <td>
+                ${infoButton}
                 <button class="btn-action" onclick="window.openEditModal('${row.id}')">Edit</button>
                 <button class="btn-action delete" onclick="window.confirmDelete('${row.id}')">Delete</button>
             </td>
@@ -292,6 +340,36 @@ const exportData = () => {
     showToast('Data exported!', 'success');
 };
 
+const importData = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (Array.isArray(imported)) {
+                currentData = imported;
+                
+                const batch = db.batch();
+                imported.forEach(entry => {
+                    const docRef = db.collection('rentEntries').doc(entry.id);
+                    batch.set(docRef, entry);
+                });
+                await batch.commit();
+                
+                renderSummary(currentData);
+                populateMonthFilter(currentData);
+                renderTable(currentData);
+                showToast('Imported!', 'success');
+            }
+        } catch (err) {
+            showToast('Import failed', 'error');
+        }
+    };
+    reader.readAsText(file);
+};
+
 const exportSummary = () => {
     const totalWeeks = currentData.filter(row => row.date && row.date !== '-').length;
     const totalRent = currentData.reduce((sum, row) => sum + (row.totalRent || 0), 0);
@@ -308,7 +386,9 @@ const exportSummary = () => {
         ['Total Rent', totalRent],
         ['I Paid', totalIPaid],
         ['Roommate Contributed', totalRoommate],
-        ['Net Paid', netTotal]
+        ['Net Paid', netTotal],
+        ['Bond From Me', bondData.myBond],
+        ['Bond From Roommate', bondData.roommateBond]
     ];
     
     const ws = XLSX.utils.aoa_to_sheet(summary);
@@ -318,12 +398,11 @@ const exportSummary = () => {
     showToast('Summary exported!', 'success');
 };
 
-// ===== FIREBASE SYNC (REAL-TIME) =====
+// ===== FIREBASE SYNC =====
 const syncData = () => {
     const loadingState = document.getElementById('loadingState');
     if (loadingState) loadingState.style.display = 'block';
     
-    // Listen for real-time changes from Firestore
     unsubscribe = db.collection('rentEntries').onSnapshot(
         (snapshot) => {
             const data = [];
@@ -331,7 +410,6 @@ const syncData = () => {
                 data.push({ id: doc.id, ...doc.data() });
             });
             
-            // Sort by date
             data.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
             
             currentData = data;
@@ -345,19 +423,34 @@ const syncData = () => {
         },
         (error) => {
             console.error('❌ Sync error:', error);
-            showToast('Sync error - check console', 'error');
+            showToast('Sync error', 'error');
             if (loadingState) loadingState.style.display = 'none';
         }
     );
 };
 
-// ===== SEED INITIAL DATA (Only if empty) =====
+const syncBondData = async () => {
+    try {
+        const doc = await db.collection('bondData').doc('main').get();
+        if (doc.exists) {
+            bondData = doc.data();
+            console.log('✅ Bond data synced from Firebase');
+        } else {
+            await db.collection('bondData').doc('main').set(bondData);
+            console.log('✅ Bond data seeded to Firebase');
+        }
+        renderSummary(currentData);
+    } catch (error) {
+        console.error('❌ Bond sync error:', error);
+    }
+};
+
 const seedInitialData = async () => {
     try {
         const snapshot = await db.collection('rentEntries').limit(1).get();
         
         if (snapshot.empty) {
-            console.log('📥 Seeding initial data to Firebase...');
+            console.log('📥 Seeding initial data...');
             const batch = db.batch();
             
             defaultData.forEach(entry => {
@@ -433,6 +526,72 @@ window.closeEditModal = function() {
     if (editEntryForm) editEntryForm.reset();
 };
 
+window.viewNotes = function(id) {
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    const notesContent = document.getElementById('notesContent');
+    
+    if (!notesModalOverlay || !notesContent) return;
+    
+    const entry = currentData.find(item => item.id === id);
+    if (!entry) {
+        showToast('Entry not found', 'error');
+        return;
+    }
+    
+    notesContent.innerHTML = `
+        <div style="margin-bottom: 1rem;">
+            <strong style="color: var(--text-primary);">Date:</strong>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem;">${formatDate(entry.date)}</p>
+        </div>
+        <div>
+            <strong style="color: var(--text-primary);">Notes:</strong>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem; white-space: pre-wrap;">${entry.notes || 'No notes for this entry'}</p>
+        </div>
+    `;
+    
+    notesModalOverlay.style.display = 'flex';
+};
+
+window.closeNotesModal = function() {
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    if (notesModalOverlay) notesModalOverlay.style.display = 'none';
+};
+
+window.openBondModal = function(type) {
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    const bondModalTitle = document.getElementById('bondModalTitle');
+    const bondType = document.getElementById('bondType');
+    const bondAmount = document.getElementById('bondAmount');
+    const bondDate = document.getElementById('bondDate');
+    const bondNotes = document.getElementById('bondNotes');
+    
+    if (!bondModalOverlay) return;
+    
+    bondType.value = type;
+    
+    if (type === 'my') {
+        bondModalTitle.textContent = 'Edit My Bond';
+        bondAmount.value = bondData.myBond || '';
+        bondDate.value = formatDateForInput(bondData.myBondDate);
+        bondNotes.value = bondData.myBondNotes || '';
+    } else {
+        bondModalTitle.textContent = 'Edit Roommate\'s Bond';
+        bondAmount.value = bondData.roommateBond || '';
+        bondDate.value = formatDateForInput(bondData.roommateBondDate);
+        bondNotes.value = bondData.roommateBondNotes || '';
+    }
+    
+    bondModalOverlay.style.display = 'flex';
+    if (bondAmount) bondAmount.focus();
+};
+
+window.closeBondModal = function() {
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    const bondForm = document.getElementById('bondForm');
+    if (bondModalOverlay) bondModalOverlay.style.display = 'none';
+    if (bondForm) bondForm.reset();
+};
+
 window.saveNewEntry = async function(e) {
     if (e) e.preventDefault();
     
@@ -452,7 +611,6 @@ window.saveNewEntry = async function(e) {
     const iPaid = entryIPaid && entryIPaid.value ? parseFloat(entryIPaid.value) : null;
     const roommatePaid = entryRoommatePaid && entryRoommatePaid.value ? parseFloat(entryRoommatePaid.value) : null;
     
-    // Format roommate paid date correctly as DD-MMM-YYYY
     let roommatePaidOn = null;
     if (entryRoommateDate && entryRoommateDate.value) {
         const rpDateObj = new Date(entryRoommateDate.value);
@@ -476,27 +634,15 @@ window.saveNewEntry = async function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
-    const newEntry = {
-        id: generateId(),
-        date,
-        totalRent,
-        iPaid,
-        roommatePaid,
-        netPaid,
-        roommatePaidOn,
-        status,
-        notes
-    };
+    const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
     try {
-        // Save to Firebase
         await db.collection('rentEntries').doc(newEntry.id).set(newEntry);
-        
         renderSummary(currentData);
         populateMonthFilter(currentData);
         renderTable(currentData);
         window.closeAddModal();
-        showToast('Entry saved to cloud!', 'success');
+        showToast('Entry saved!', 'success');
     } catch (error) {
         console.error('❌ Save error:', error);
         showToast('Failed to save', 'error');
@@ -530,7 +676,6 @@ window.updateEntry = async function(e) {
     const iPaid = editIPaid && editIPaid.value ? parseFloat(editIPaid.value) : null;
     const roommatePaid = editRoommatePaid && editRoommatePaid.value ? parseFloat(editRoommatePaid.value) : null;
     
-    // Format roommate paid date correctly as DD-MMM-YYYY
     let roommatePaidOn = null;
     if (editRoommateDate && editRoommateDate.value) {
         const rpDateObj = new Date(editRoommateDate.value);
@@ -554,21 +699,10 @@ window.updateEntry = async function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
-    const updatedData = {
-        date,
-        totalRent,
-        iPaid,
-        roommatePaid,
-        netPaid,
-        roommatePaidOn,
-        status,
-        notes
-    };
+    const updatedData = { date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
     try {
-        // Update in Firebase
         await db.collection('rentEntries').doc(id).update(updatedData);
-        
         renderSummary(currentData);
         populateMonthFilter(currentData);
         renderTable(currentData);
@@ -577,6 +711,51 @@ window.updateEntry = async function(e) {
     } catch (error) {
         console.error('❌ Update error:', error);
         showToast('Failed to update', 'error');
+    }
+};
+
+window.saveBond = async function(e) {
+    if (e) e.preventDefault();
+    
+    const bondType = document.getElementById('bondType').value;
+    const bondAmount = document.getElementById('bondAmount');
+    const bondDate = document.getElementById('bondDate');
+    const bondNotes = document.getElementById('bondNotes');
+    
+    if (!bondAmount || !bondAmount.value) {
+        showToast('Enter bond amount', 'error');
+        return;
+    }
+    
+    const amount = parseFloat(bondAmount.value);
+    const dateValue = bondDate && bondDate.value ? bondDate.value : null;
+    const notes = bondNotes ? bondNotes.value : '';
+    
+    let formattedDate = null;
+    if (dateValue) {
+        const dateObj = new Date(dateValue);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        formattedDate = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    }
+    
+    if (bondType === 'my') {
+        bondData.myBond = amount;
+        bondData.myBondDate = formattedDate;
+        bondData.myBondNotes = notes;
+    } else {
+        bondData.roommateBond = amount;
+        bondData.roommateBondDate = formattedDate;
+        bondData.roommateBondNotes = notes;
+    }
+    
+    try {
+        await saveBondData();
+        renderSummary(currentData);
+        window.closeBondModal();
+        showToast('Bond updated!', 'success');
+    } catch (error) {
+        console.error('❌ Bond save error:', error);
+        showToast('Failed to save bond', 'error');
     }
 };
 
@@ -598,9 +777,7 @@ window.executeDelete = async function() {
     if (!deleteTargetId) return;
     
     try {
-        // Delete from Firebase
         await db.collection('rentEntries').doc(deleteTargetId).delete();
-        
         renderSummary(currentData);
         populateMonthFilter(currentData);
         renderTable(currentData);
@@ -636,6 +813,12 @@ const setupEventListeners = () => {
         });
     }
     
+    const btnEditMyBond = document.getElementById('btnEditMyBond');
+    if (btnEditMyBond) btnEditMyBond.addEventListener('click', () => window.openBondModal('my'));
+    
+    const btnEditRoommateBond = document.getElementById('btnEditRoommateBond');
+    if (btnEditRoommateBond) btnEditRoommateBond.addEventListener('click', () => window.openBondModal('roommate'));
+    
     const btnCloseModal = document.getElementById('btnCloseModal');
     if (btnCloseModal) btnCloseModal.addEventListener('click', window.closeAddModal);
     
@@ -647,6 +830,18 @@ const setupEventListeners = () => {
     
     const btnCancelEdit = document.getElementById('btnCancelEdit');
     if (btnCancelEdit) btnCancelEdit.addEventListener('click', window.closeEditModal);
+    
+    const btnCloseNotesModal = document.getElementById('btnCloseNotesModal');
+    if (btnCloseNotesModal) btnCloseNotesModal.addEventListener('click', window.closeNotesModal);
+    
+    const btnCancelNotes = document.getElementById('btnCancelNotes');
+    if (btnCancelNotes) btnCancelNotes.addEventListener('click', window.closeNotesModal);
+    
+    const btnCloseBondModal = document.getElementById('btnCloseBondModal');
+    if (btnCloseBondModal) btnCloseBondModal.addEventListener('click', window.closeBondModal);
+    
+    const btnCancelBond = document.getElementById('btnCancelBond');
+    if (btnCancelBond) btnCancelBond.addEventListener('click', window.closeBondModal);
     
     const btnCloseDeleteModal = document.getElementById('btnCloseDeleteModal');
     if (btnCloseDeleteModal) btnCloseDeleteModal.addEventListener('click', window.closeDeleteModal);
@@ -662,6 +857,9 @@ const setupEventListeners = () => {
     
     const editEntryForm = document.getElementById('editEntryForm');
     if (editEntryForm) editEntryForm.addEventListener('submit', window.updateEntry);
+    
+    const bondForm = document.getElementById('bondForm');
+    if (bondForm) bondForm.addEventListener('submit', window.saveBond);
     
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.addEventListener('input', filterData);
@@ -685,6 +883,16 @@ const setupEventListeners = () => {
         if (e.target === editModalOverlay) window.closeEditModal();
     });
     
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    if (notesModalOverlay) notesModalOverlay.addEventListener('click', (e) => {
+        if (e.target === notesModalOverlay) window.closeNotesModal();
+    });
+    
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    if (bondModalOverlay) bondModalOverlay.addEventListener('click', (e) => {
+        if (e.target === bondModalOverlay) window.closeBondModal();
+    });
+    
     const deleteModalOverlay = document.getElementById('deleteModalOverlay');
     if (deleteModalOverlay) deleteModalOverlay.addEventListener('click', (e) => {
         if (e.target === deleteModalOverlay) window.closeDeleteModal();
@@ -695,11 +903,15 @@ const setupEventListeners = () => {
             const modal = document.getElementById('modalOverlay');
             const editModal = document.getElementById('editModalOverlay');
             const deleteModal = document.getElementById('deleteModalOverlay');
+            const notesModal = document.getElementById('notesModalOverlay');
+            const bondModal = document.getElementById('bondModalOverlay');
             const toast = document.getElementById('toast');
             
             if (modal && modal.style.display === 'flex') window.closeAddModal();
             if (editModal && editModal.style.display === 'flex') window.closeEditModal();
             if (deleteModal && deleteModal.style.display === 'flex') window.closeDeleteModal();
+            if (notesModal && notesModal.style.display === 'flex') window.closeNotesModal();
+            if (bondModal && bondModal.style.display === 'flex') window.closeBondModal();
             if (toast && toast.style.display === 'flex') toast.style.display = 'none';
         }
     });
@@ -710,21 +922,24 @@ const init = async () => {
     console.log('🚀 Initializing Rent Tracker with Firebase...');
     
     initTheme();
+    loadBondData();
     
-    // Seed initial data if Firestore is empty
     await seedInitialData();
-    
-    // Start real-time sync
+    await syncBondData();
     syncData();
     
     const modalOverlay = document.getElementById('modalOverlay');
     const editModalOverlay = document.getElementById('editModalOverlay');
     const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
     const toast = document.getElementById('toast');
     
     if (modalOverlay) modalOverlay.style.display = 'none';
     if (editModalOverlay) editModalOverlay.style.display = 'none';
     if (deleteModalOverlay) deleteModalOverlay.style.display = 'none';
+    if (notesModalOverlay) notesModalOverlay.style.display = 'none';
+    if (bondModalOverlay) bondModalOverlay.style.display = 'none';
     if (toast) toast.style.display = 'none';
     
     setupEventListeners();
