@@ -682,3 +682,184 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+window.saveNewEntry = function(e) {
+    if (e) e.preventDefault();
+    
+    console.log('=== SAVE ENTRY STARTED ===');
+    
+    const entryDate = document.getElementById('entryDate');
+    const entryTotalRent = document.getElementById('entryTotalRent');
+    const entryIPaid = document.getElementById('entryIPaid');
+    const entryRoommatePaid = document.getElementById('entryRoommatePaid');
+    const entryRoommateDate = document.getElementById('entryRoommateDate');
+    const entryNotes = document.getElementById('entryNotes');
+    
+    if (!entryDate || !entryDate.value) {
+        showToast('Please select a date', 'error');
+        return;
+    }
+    
+    // Get values
+    const totalRent = entryTotalRent && entryTotalRent.value ? parseFloat(entryTotalRent.value) : 750;
+    const iPaid = entryIPaid && entryIPaid.value ? parseFloat(entryIPaid.value) : null;
+    const roommatePaid = entryRoommatePaid && entryRoommatePaid.value ? parseFloat(entryRoommatePaid.value) : null;
+    const roommatePaidOn = entryRoommateDate && entryRoommateDate.value ? formatDateForDisplay(entryRoommateDate.value) : null;
+    const notes = entryNotes ? entryNotes.value : '';
+    
+    // Format date as DD-MMM-YYYY
+    const dateObj = new Date(entryDate.value);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const date = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    
+    console.log('Date being saved:', date);
+    
+    // Calculate net paid
+    let netPaid = 0;
+    if (iPaid !== null && roommatePaid !== null) {
+        netPaid = iPaid - roommatePaid;
+    } else if (iPaid !== null) {
+        netPaid = iPaid;
+    }
+    
+    // Determine status
+    let status = 'pending';
+    if (iPaid && iPaid > 0) {
+        status = 'paid';
+    }
+    
+    // Create new entry
+    const newEntry = {
+        id: generateId(),
+        date: date,
+        totalRent: totalRent,
+        iPaid: iPaid,
+        roommatePaid: roommatePaid,
+        netPaid: netPaid,
+        roommatePaidOn: roommatePaidOn,
+        status: status,
+        notes: notes
+    };
+    
+    console.log('New entry:', newEntry);
+    
+    // Add to data and save
+    currentData.push(newEntry);
+    
+    // Sort by date
+    currentData.sort((a, b) => {
+        const dateA = formatDateForInput(a.date);
+        const dateB = formatDateForInput(b.date);
+        return new Date(dateA) - new Date(dateB);
+    });
+    
+    // Save to localStorage
+    const saved = saveData();
+    console.log('Save result:', saved);
+    
+    if (saved) {
+        // Refresh UI
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeAddModal();
+        showToast('Entry saved successfully!', 'success');
+    } else {
+        showToast('Failed to save entry', 'error');
+    }
+};
+
+window.updateEntry = function(e) {
+    if (e) e.preventDefault();
+    
+    console.log('=== UPDATE ENTRY STARTED ===');
+    
+    const editEntryId = document.getElementById('editEntryId');
+    const editDate = document.getElementById('editDate');
+    const editTotalRent = document.getElementById('editTotalRent');
+    const editIPaid = document.getElementById('editIPaid');
+    const editRoommatePaid = document.getElementById('editRoommatePaid');
+    const editRoommateDate = document.getElementById('editRoommateDate');
+    const editNotes = document.getElementById('editNotes');
+    
+    if (!editEntryId || !editEntryId.value) {
+        showToast('Entry ID missing', 'error');
+        return;
+    }
+    
+    const id = editEntryId.value;
+    const index = currentData.findIndex(item => item.id === id);
+    
+    if (index === -1) {
+        showToast('Entry not found', 'error');
+        return;
+    }
+    
+    if (!editDate || !editDate.value) {
+        showToast('Please select a date', 'error');
+        return;
+    }
+    
+    // Get values
+    const totalRent = editTotalRent && editTotalRent.value ? parseFloat(editTotalRent.value) : 0;
+    const iPaid = editIPaid && editIPaid.value ? parseFloat(editIPaid.value) : null;
+    const roommatePaid = editRoommatePaid && editRoommatePaid.value ? parseFloat(editRoommatePaid.value) : null;
+    const roommatePaidOn = editRoommateDate && editRoommateDate.value ? formatDateForDisplay(editRoommateDate.value) : null;
+    const notes = editNotes ? editNotes.value : '';
+    
+    // Format date as DD-MMM-YYYY
+    const dateObj = new Date(editDate.value);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const date = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    
+    console.log('Updated date:', date);
+    
+    // Calculate net paid
+    let netPaid = 0;
+    if (iPaid !== null && roommatePaid !== null) {
+        netPaid = iPaid - roommatePaid;
+    } else if (iPaid !== null) {
+        netPaid = iPaid;
+    }
+    
+    // Determine status
+    let status = 'pending';
+    if (iPaid && iPaid > 0) {
+        status = 'paid';
+    }
+    
+    // Update entry
+    currentData[index] = {
+        ...currentData[index],
+        date: date,
+        totalRent: totalRent,
+        iPaid: iPaid,
+        roommatePaid: roommatePaid,
+        netPaid: netPaid,
+        roommatePaidOn: roommatePaidOn,
+        status: status,
+        notes: notes
+    };
+    
+    console.log('Updated entry:', currentData[index]);
+    
+    // Sort by date
+    currentData.sort((a, b) => {
+        const dateA = formatDateForInput(a.date);
+        const dateB = formatDateForInput(b.date);
+        return new Date(dateA) - new Date(dateB);
+    });
+    
+    // Save to localStorage
+    const saved = saveData();
+    
+    if (saved) {
+        // Refresh UI
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeEditModal();
+        showToast('Entry updated successfully!', 'success');
+    } else {
+        showToast('Failed to update entry', 'error');
+    }
+};
