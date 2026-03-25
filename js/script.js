@@ -384,4 +384,577 @@ const importData = (event) => {
 
 const exportSummary = () => {
     const totalWeeks = currentData.filter(row => row.date && row.date !== '-').length;
-    const totalRent = currentData.reduce((sum, row) => sum
+    const totalRent = currentData.reduce((sum, row) => sum + (row.totalRent || 0), 0);
+    const totalIPaid = currentData.reduce((sum, row) => sum + (row.iPaid || 0), 0);
+    const totalRoommate = currentData.reduce((sum, row) => sum + (row.roommatePaid || 0), 0);
+    const netTotal = currentData.reduce((sum, row) => sum + (row.netPaid || 0), 0);
+    
+    const summary = [
+        ['Hurstville Rent Summary'],
+        ['Generated:', new Date().toLocaleDateString()],
+        [],
+        ['Metric', 'Value'],
+        ['Total Weeks', totalWeeks],
+        ['Total Rent', totalRent],
+        ['I Paid', totalIPaid],
+        ['Roommate Contributed', totalRoommate],
+        ['Net Paid', netTotal],
+        ['Bond From Me', bondData.myBond],
+        ['Bond From Roommate', bondData.roommateBond]
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet(summary);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+    XLSX.writeFile(wb, `Rent-Summary-${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Summary exported!', 'success');
+};
+
+// ===== FIREBASE SYNC =====
+const syncData = () => {
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) loadingState.style.display = 'block';
+    
+    unsubscribe = db.collection('rentEntries').onSnapshot(
+        (snapshot) => {
+            const data = [];
+            snapshot.forEach((doc) => {
+                data.push({ id: doc.id, ...doc.data() });
+            });
+            
+            data.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
+            
+            currentData = data;
+            
+            renderSummary(currentData);
+            populateMonthFilter(currentData);
+            renderTable(currentData);
+            
+            if (loadingState) loadingState.style.display = 'none';
+            console.log('✅ Synced', currentData.length, 'entries from Firebase');
+        },
+        (error) => {
+            console.error('❌ Sync error:', error);
+            showToast('Sync error', 'error');
+            if (loadingState) loadingState.style.display = 'none';
+        }
+    );
+};
+
+const syncBondData = async () => {
+    try {
+        const doc = await db.collection('bondData').doc('main').get();
+        if (doc.exists) {
+            bondData = doc.data();
+            console.log('✅ Bond data synced from Firebase');
+        } else {
+            await db.collection('bondData').doc('main').set(bondData);
+            console.log('✅ Bond data seeded to Firebase');
+        }
+        renderSummary(currentData);
+    } catch (error) {
+        console.error('❌ Bond sync error:', error);
+    }
+};
+
+const seedInitialData = async () => {
+    try {
+        const snapshot = await db.collection('rentEntries').limit(1).get();
+        
+        if (snapshot.empty) {
+            console.log('📥 Seeding initial data...');
+            const batch = db.batch();
+            
+            defaultData.forEach(entry => {
+                const docRef = db.collection('rentEntries').doc(entry.id);
+                batch.set(docRef, entry);
+            });
+            
+            await batch.commit();
+            console.log('✅ Initial data seeded');
+        }
+    } catch (error) {
+        console.error('❌ Seed error:', error);
+    }
+};
+
+// ===== MODAL FUNCTIONS =====
+window.openAddModal = function() {
+    const modalOverlay = document.getElementById('modalOverlay');
+    const addEntryForm = document.getElementById('addEntryForm');
+    const entryDate = document.getElementById('entryDate');
+    const entryTotalRent = document.getElementById('entryTotalRent');
+    
+    if (!modalOverlay) return;
+    if (addEntryForm) addEntryForm.reset();
+    if (entryDate) entryDate.valueAsDate = new Date();
+    if (entryTotalRent) entryTotalRent.value = 750;
+    
+    modalOverlay.style.display = 'flex';
+    if (entryDate) entryDate.focus();
+};
+
+window.closeAddModal = function() {
+    const modalOverlay = document.getElementById('modalOverlay');
+    const addEntryForm = document.getElementById('addEntryForm');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    if (addEntryForm) addEntryForm.reset();
+};
+
+window.openEditModal = function(id) {
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    if (!editModalOverlay) return;
+    
+    const entry = currentData.find(item => item.id === id);
+    if (!entry) {
+        showToast('Entry not found', 'error');
+        return;
+    }
+    
+    const editEntryId = document.getElementById('editEntryId');
+    const editDate = document.getElementById('editDate');
+    const editTotalRent = document.getElementById('editTotalRent');
+    const editIPaid = document.getElementById('editIPaid');
+    const editRoommatePaid = document.getElementById('editRoommatePaid');
+    const editRoommateDate = document.getElementById('editRoommateDate');
+    const editNotes = document.getElementById('editNotes');
+    
+    if (editEntryId) editEntryId.value = id;
+    if (editDate) editDate.value = formatDateForInput(entry.date);
+    if (editTotalRent) editTotalRent.value = entry.totalRent || '';
+    if (editIPaid) editIPaid.value = entry.iPaid || '';
+    if (editRoommatePaid) editRoommatePaid.value = entry.roommatePaid || '';
+    if (editRoommateDate) editRoommateDate.value = formatDateForInput(entry.roommatePaidOn);
+    if (editNotes) editNotes.value = entry.notes || '';
+    
+    editModalOverlay.style.display = 'flex';
+    if (editDate) editDate.focus();
+};
+
+window.closeEditModal = function() {
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    const editEntryForm = document.getElementById('editEntryForm');
+    if (editModalOverlay) editModalOverlay.style.display = 'none';
+    if (editEntryForm) editEntryForm.reset();
+};
+
+window.viewNotes = function(id) {
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    const notesContent = document.getElementById('notesContent');
+    
+    if (!notesModalOverlay || !notesContent) return;
+    
+    const entry = currentData.find(item => item.id === id);
+    if (!entry) {
+        showToast('Entry not found', 'error');
+        return;
+    }
+    
+    notesContent.innerHTML = `
+        <div style="margin-bottom: 1rem;">
+            <strong style="color: var(--text-primary);">Date:</strong>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem;">${formatDate(entry.date)}</p>
+        </div>
+        <div>
+            <strong style="color: var(--text-primary);">Notes:</strong>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem; white-space: pre-wrap;">${entry.notes || 'No notes for this entry'}</p>
+        </div>
+    `;
+    
+    notesModalOverlay.style.display = 'flex';
+};
+
+window.closeNotesModal = function() {
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    if (notesModalOverlay) notesModalOverlay.style.display = 'none';
+};
+
+window.openBondModal = function(type) {
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    const bondModalTitle = document.getElementById('bondModalTitle');
+    const bondType = document.getElementById('bondType');
+    const bondAmount = document.getElementById('bondAmount');
+    const bondDate = document.getElementById('bondDate');
+    const bondNotes = document.getElementById('bondNotes');
+    
+    if (!bondModalOverlay) return;
+    
+    bondType.value = type;
+    
+    if (type === 'my') {
+        bondModalTitle.textContent = 'Edit My Bond';
+        bondAmount.value = bondData.myBond || '';
+        bondDate.value = formatDateForInput(bondData.myBondDate);
+        bondNotes.value = bondData.myBondNotes || '';
+    } else {
+        bondModalTitle.textContent = 'Edit Roommate\'s Bond';
+        bondAmount.value = bondData.roommateBond || '';
+        bondDate.value = formatDateForInput(bondData.roommateBondDate);
+        bondNotes.value = bondData.roommateBondNotes || '';
+    }
+    
+    bondModalOverlay.style.display = 'flex';
+    if (bondAmount) bondAmount.focus();
+};
+
+window.closeBondModal = function() {
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    const bondForm = document.getElementById('bondForm');
+    if (bondModalOverlay) bondModalOverlay.style.display = 'none';
+    if (bondForm) bondForm.reset();
+};
+
+window.saveNewEntry = async function(e) {
+    if (e) e.preventDefault();
+    
+    const entryDate = document.getElementById('entryDate');
+    const entryTotalRent = document.getElementById('entryTotalRent');
+    const entryIPaid = document.getElementById('entryIPaid');
+    const entryRoommatePaid = document.getElementById('entryRoommatePaid');
+    const entryRoommateDate = document.getElementById('entryRoommateDate');
+    const entryNotes = document.getElementById('entryNotes');
+    
+    if (!entryDate || !entryDate.value) {
+        showToast('Select a date', 'error');
+        return;
+    }
+    
+    const totalRent = entryTotalRent && entryTotalRent.value ? parseFloat(entryTotalRent.value) : 750;
+    const iPaid = entryIPaid && entryIPaid.value ? parseFloat(entryIPaid.value) : null;
+    const roommatePaid = entryRoommatePaid && entryRoommatePaid.value ? parseFloat(entryRoommatePaid.value) : null;
+    
+    let roommatePaidOn = null;
+    if (entryRoommateDate && entryRoommateDate.value) {
+        const rpDateObj = new Date(entryRoommateDate.value);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        roommatePaidOn = `${rpDateObj.getDate()}-${months[rpDateObj.getMonth()]}-${rpDateObj.getFullYear()}`;
+    }
+    
+    const notes = entryNotes ? entryNotes.value : '';
+    
+    const dateObj = new Date(entryDate.value);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const date = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    
+    let netPaid = 0;
+    if (iPaid !== null && roommatePaid !== null) {
+        netPaid = iPaid - roommatePaid;
+    } else if (iPaid !== null) {
+        netPaid = iPaid;
+    }
+    
+    let status = 'pending';
+    if (iPaid && iPaid > 0) status = 'paid';
+    
+    const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
+    
+    try {
+        await db.collection('rentEntries').doc(newEntry.id).set(newEntry);
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeAddModal();
+        showToast('Entry saved!', 'success');
+    } catch (error) {
+        console.error('❌ Save error:', error);
+        showToast('Failed to save', 'error');
+    }
+};
+
+window.updateEntry = async function(e) {
+    if (e) e.preventDefault();
+    
+    const editEntryId = document.getElementById('editEntryId');
+    const editDate = document.getElementById('editDate');
+    const editTotalRent = document.getElementById('editTotalRent');
+    const editIPaid = document.getElementById('editIPaid');
+    const editRoommatePaid = document.getElementById('editRoommatePaid');
+    const editRoommateDate = document.getElementById('editRoommateDate');
+    const editNotes = document.getElementById('editNotes');
+    
+    if (!editEntryId || !editEntryId.value) {
+        showToast('Entry ID missing', 'error');
+        return;
+    }
+    
+    const id = editEntryId.value;
+    
+    if (!editDate || !editDate.value) {
+        showToast('Select a date', 'error');
+        return;
+    }
+    
+    const totalRent = editTotalRent && editTotalRent.value ? parseFloat(editTotalRent.value) : 0;
+    const iPaid = editIPaid && editIPaid.value ? parseFloat(editIPaid.value) : null;
+    const roommatePaid = editRoommatePaid && editRoommatePaid.value ? parseFloat(editRoommatePaid.value) : null;
+    
+    let roommatePaidOn = null;
+    if (editRoommateDate && editRoommateDate.value) {
+        const rpDateObj = new Date(editRoommateDate.value);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        roommatePaidOn = `${rpDateObj.getDate()}-${months[rpDateObj.getMonth()]}-${rpDateObj.getFullYear()}`;
+    }
+    
+    const notes = editNotes ? editNotes.value : '';
+    
+    const dateObj = new Date(editDate.value);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const date = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    
+    let netPaid = 0;
+    if (iPaid !== null && roommatePaid !== null) {
+        netPaid = iPaid - roommatePaid;
+    } else if (iPaid !== null) {
+        netPaid = iPaid;
+    }
+    
+    let status = 'pending';
+    if (iPaid && iPaid > 0) status = 'paid';
+    
+    const updatedData = { date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
+    
+    try {
+        await db.collection('rentEntries').doc(id).update(updatedData);
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeEditModal();
+        showToast('Entry updated!', 'success');
+    } catch (error) {
+        console.error('❌ Update error:', error);
+        showToast('Failed to update', 'error');
+    }
+};
+
+window.saveBond = async function(e) {
+    if (e) e.preventDefault();
+    
+    const bondType = document.getElementById('bondType').value;
+    const bondAmount = document.getElementById('bondAmount');
+    const bondDate = document.getElementById('bondDate');
+    const bondNotes = document.getElementById('bondNotes');
+    
+    if (!bondAmount || !bondAmount.value) {
+        showToast('Enter bond amount', 'error');
+        return;
+    }
+    
+    const amount = parseFloat(bondAmount.value);
+    const dateValue = bondDate && bondDate.value ? bondDate.value : null;
+    const notes = bondNotes ? bondNotes.value : '';
+    
+    let formattedDate = null;
+    if (dateValue) {
+        const dateObj = new Date(dateValue);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        formattedDate = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
+    }
+    
+    if (bondType === 'my') {
+        bondData.myBond = amount;
+        bondData.myBondDate = formattedDate;
+        bondData.myBondNotes = notes;
+    } else {
+        bondData.roommateBond = amount;
+        bondData.roommateBondDate = formattedDate;
+        bondData.roommateBondNotes = notes;
+    }
+    
+    try {
+        await saveBondData();
+        renderSummary(currentData);
+        window.closeBondModal();
+        showToast('Bond updated!', 'success');
+    } catch (error) {
+        console.error('❌ Bond save error:', error);
+        showToast('Failed to save bond', 'error');
+    }
+};
+
+let deleteTargetId = null;
+
+window.confirmDelete = function(id) {
+    deleteTargetId = id;
+    const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    if (deleteModalOverlay) deleteModalOverlay.style.display = 'flex';
+};
+
+window.closeDeleteModal = function() {
+    const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    if (deleteModalOverlay) deleteModalOverlay.style.display = 'none';
+    deleteTargetId = null;
+};
+
+window.executeDelete = async function() {
+    if (!deleteTargetId) return;
+    
+    try {
+        await db.collection('rentEntries').doc(deleteTargetId).delete();
+        renderSummary(currentData);
+        populateMonthFilter(currentData);
+        renderTable(currentData);
+        window.closeDeleteModal();
+        showToast('Entry deleted', 'success');
+    } catch (error) {
+        console.error('❌ Delete error:', error);
+        showToast('Failed to delete', 'error');
+    }
+};
+
+// ===== EVENT LISTENERS =====
+const setupEventListeners = () => {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    
+    const btnAddEntry = document.getElementById('btnAddEntry');
+    if (btnAddEntry) btnAddEntry.addEventListener('click', window.openAddModal);
+    
+    const btnAddFromEmpty = document.getElementById('btnAddFromEmpty');
+    if (btnAddFromEmpty) btnAddFromEmpty.addEventListener('click', window.openAddModal);
+    
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) btnExport.addEventListener('click', exportSummary);
+    
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) btnBackup.addEventListener('click', exportData);
+    
+    const btnImport = document.getElementById('btnImport');
+    if (btnImport) {
+        btnImport.addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+    }
+    
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    if (btnCloseModal) btnCloseModal.addEventListener('click', window.closeAddModal);
+    
+    const btnCancelEntry = document.getElementById('btnCancelEntry');
+    if (btnCancelEntry) btnCancelEntry.addEventListener('click', window.closeAddModal);
+    
+    const btnCloseEditModal = document.getElementById('btnCloseEditModal');
+    if (btnCloseEditModal) btnCloseEditModal.addEventListener('click', window.closeEditModal);
+    
+    const btnCancelEdit = document.getElementById('btnCancelEdit');
+    if (btnCancelEdit) btnCancelEdit.addEventListener('click', window.closeEditModal);
+    
+    const btnCloseNotesModal = document.getElementById('btnCloseNotesModal');
+    if (btnCloseNotesModal) btnCloseNotesModal.addEventListener('click', window.closeNotesModal);
+    
+    const btnCancelNotes = document.getElementById('btnCancelNotes');
+    if (btnCancelNotes) btnCancelNotes.addEventListener('click', window.closeNotesModal);
+    
+    const btnCloseBondModal = document.getElementById('btnCloseBondModal');
+    if (btnCloseBondModal) btnCloseBondModal.addEventListener('click', window.closeBondModal);
+    
+    const btnCancelBond = document.getElementById('btnCancelBond');
+    if (btnCancelBond) btnCancelBond.addEventListener('click', window.closeBondModal);
+    
+    const btnCloseDeleteModal = document.getElementById('btnCloseDeleteModal');
+    if (btnCloseDeleteModal) btnCloseDeleteModal.addEventListener('click', window.closeDeleteModal);
+    
+    const btnCancelDelete = document.getElementById('btnCancelDelete');
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', window.closeDeleteModal);
+    
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', window.executeDelete);
+    
+    const addEntryForm = document.getElementById('addEntryForm');
+    if (addEntryForm) addEntryForm.addEventListener('submit', window.saveNewEntry);
+    
+    const editEntryForm = document.getElementById('editEntryForm');
+    if (editEntryForm) editEntryForm.addEventListener('submit', window.updateEntry);
+    
+    const bondForm = document.getElementById('bondForm');
+    if (bondForm) bondForm.addEventListener('submit', window.saveBond);
+    
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.addEventListener('input', filterData);
+    
+    const monthFilter = document.getElementById('monthFilter');
+    if (monthFilter) monthFilter.addEventListener('change', filterData);
+    
+    const toastClose = document.getElementById('toastClose');
+    if (toastClose) toastClose.addEventListener('click', () => {
+        const toast = document.getElementById('toast');
+        if (toast) toast.style.display = 'none';
+    });
+    
+    const modalOverlay = document.getElementById('modalOverlay');
+    if (modalOverlay) modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) window.closeAddModal();
+    });
+    
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    if (editModalOverlay) editModalOverlay.addEventListener('click', (e) => {
+        if (e.target === editModalOverlay) window.closeEditModal();
+    });
+    
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    if (notesModalOverlay) notesModalOverlay.addEventListener('click', (e) => {
+        if (e.target === notesModalOverlay) window.closeNotesModal();
+    });
+    
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    if (bondModalOverlay) bondModalOverlay.addEventListener('click', (e) => {
+        if (e.target === bondModalOverlay) window.closeBondModal();
+    });
+    
+    const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    if (deleteModalOverlay) deleteModalOverlay.addEventListener('click', (e) => {
+        if (e.target === deleteModalOverlay) window.closeDeleteModal();
+    });
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modalOverlay');
+            const editModal = document.getElementById('editModalOverlay');
+            const deleteModal = document.getElementById('deleteModalOverlay');
+            const notesModal = document.getElementById('notesModalOverlay');
+            const bondModal = document.getElementById('bondModalOverlay');
+            const toast = document.getElementById('toast');
+            
+            if (modal && modal.style.display === 'flex') window.closeAddModal();
+            if (editModal && editModal.style.display === 'flex') window.closeEditModal();
+            if (deleteModal && deleteModal.style.display === 'flex') window.closeDeleteModal();
+            if (notesModal && notesModal.style.display === 'flex') window.closeNotesModal();
+            if (bondModal && bondModal.style.display === 'flex') window.closeBondModal();
+            if (toast && toast.style.display === 'flex') toast.style.display = 'none';
+        }
+    });
+};
+
+// ===== INITIALIZE =====
+const init = async () => {
+    console.log('🚀 Initializing Rent Tracker with Firebase...');
+    
+    initTheme();
+    loadBondData();
+    
+    await seedInitialData();
+    await syncBondData();
+    syncData();
+    
+    const modalOverlay = document.getElementById('modalOverlay');
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+    const notesModalOverlay = document.getElementById('notesModalOverlay');
+    const bondModalOverlay = document.getElementById('bondModalOverlay');
+    const toast = document.getElementById('toast');
+    
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    if (editModalOverlay) editModalOverlay.style.display = 'none';
+    if (deleteModalOverlay) deleteModalOverlay.style.display = 'none';
+    if (notesModalOverlay) notesModalOverlay.style.display = 'none';
+    if (bondModalOverlay) bondModalOverlay.style.display = 'none';
+    if (toast) toast.style.display = 'none';
+    
+    setupEventListeners();
+    
+    console.log('✅ App initialized - data syncing from Firebase');
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
