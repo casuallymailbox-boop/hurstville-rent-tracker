@@ -113,7 +113,7 @@ const loadBondData = () => {
         const stored = localStorage.getItem(BOND_KEY);
         if (stored) {
             bondData = JSON.parse(stored);
-            console.log('✅ Bond data loaded');
+            console.log('✅ Bond data loaded from localStorage');
         }
     } catch (e) {
         console.error('❌ Bond load error:', e);
@@ -124,9 +124,13 @@ const saveBondData = async () => {
     try {
         localStorage.setItem(BOND_KEY, JSON.stringify(bondData));
         await db.collection('bondData').doc('main').set(bondData);
-        console.log('✅ Bond data saved');
+        console.log('✅ Bond data saved to localStorage and Firebase');
+        return true;
     } catch (e) {
         console.error('❌ Bond save error:', e);
+        localStorage.setItem(BOND_KEY, JSON.stringify(bondData));
+        console.log('⚠️ Bond saved to localStorage only (Firebase failed)');
+        return false;
     }
 };
 
@@ -446,7 +450,7 @@ const syncBondData = async () => {
         const doc = await db.collection('bondData').doc('main').get();
         if (doc.exists) {
             bondData = doc.data();
-            console.log('✅ Bond data synced from Firebase');
+            console.log('✅ Bond data synced from Firebase:', bondData);
         } else {
             await db.collection('bondData').doc('main').set(bondData);
             console.log('✅ Bond data seeded to Firebase');
@@ -454,6 +458,8 @@ const syncBondData = async () => {
         renderSummary(currentData);
     } catch (error) {
         console.error('❌ Bond sync error:', error);
+        console.log('⚠️ Using localStorage bond data');
+        renderSummary(currentData);
     }
 };
 
@@ -589,7 +595,7 @@ window.openBondModal = function(type) {
     } else {
         bondModalTitle.textContent = 'Edit Roommate\'s Bond';
         bondAmount.value = bondData.roommateBond || '';
-        bondDate.value = formatDateForInput(bondData.roommateBondDate);
+        bondDate.value = bondData.roommateBondDate ? formatDateForInput(bondData.roommateBondDate) : '';
         bondNotes.value = bondData.roommateBondNotes || '';
     }
     
@@ -750,6 +756,8 @@ window.saveBond = async function(e) {
         formattedDate = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
     }
     
+    console.log('💾 Saving bond:', bondType, amount, formattedDate, notes);
+    
     if (bondType === 'my') {
         bondData.myBond = amount;
         bondData.myBondDate = formattedDate;
@@ -760,11 +768,18 @@ window.saveBond = async function(e) {
         bondData.roommateBondNotes = notes;
     }
     
+    console.log('💾 Bond data:', bondData);
+    
     try {
-        await saveBondData();
+        const saved = await saveBondData();
         renderSummary(currentData);
         window.closeBondModal();
-        showToast('Bond updated!', 'success');
+        
+        if (saved) {
+            showToast('Bond saved to cloud!', 'success');
+        } else {
+            showToast('Bond saved locally', 'warning');
+        }
     } catch (error) {
         console.error('❌ Bond save error:', error);
         showToast('Failed to save bond', 'error');
@@ -951,6 +966,7 @@ const init = async () => {
     setupEventListeners();
     
     console.log('✅ App initialized - data syncing from Firebase');
+    console.log('💾 Bond data:', bondData);
 };
 
 if (document.readyState === 'loading') {
