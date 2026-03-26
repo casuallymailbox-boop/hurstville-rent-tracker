@@ -426,9 +426,14 @@ const syncBondData = () => {
                 bondData = doc.data();
                 console.log('✅ Bond data synced from Firebase:', bondData);
             } else {
-                // Initialize with default if doesn't exist
-                db.collection('bondData').doc('main').set(bondData);
-                console.log('✅ Bond data initialized in Firebase');
+                // Initialize with default if doesn't exist - USE SET WITH MERGE
+                db.collection('bondData').doc('main').set(bondData, { merge: true })
+                    .then(() => {
+                        console.log('✅ Bond data initialized in Firebase');
+                    })
+                    .catch((error) => {
+                        console.error('❌ Bond init error:', error);
+                    });
             }
             renderSummary(currentData);
         },
@@ -727,23 +732,29 @@ window.saveBond = async function(e) {
     
     console.log('💾 Saving bond:', bondType, amount, formattedDate, notes);
     
-    // Update bond data and save to Firebase
-    if (bondType === 'my') {
-        await db.collection('bondData').doc('main').update({
-            myBond: amount,
-            myBondDate: formattedDate,
-            myBondNotes: notes
-        });
-    } else {
-        await db.collection('bondData').doc('main').update({
-            roommateBond: amount,
-            roommateBondDate: formattedDate,
-            roommateBondNotes: notes
-        });
+    try {
+        // USE SET WITH MERGE - This creates the document if it doesn't exist
+        if (bondType === 'my') {
+            await db.collection('bondData').doc('main').set({
+                myBond: amount,
+                myBondDate: formattedDate,
+                myBondNotes: notes
+            }, { merge: true });
+        } else {
+            await db.collection('bondData').doc('main').set({
+                roommateBond: amount,
+                roommateBondDate: formattedDate,
+                roommateBondNotes: notes
+            }, { merge: true });
+        }
+        
+        console.log('✅ Bond saved to Firebase');
+        window.closeBondModal();
+        showToast('Bond saved to cloud!', 'success');
+    } catch (error) {
+        console.error('❌ Bond save error:', error);
+        showToast('Failed to save bond', 'error');
     }
-    
-    window.closeBondModal();
-    showToast('Bond saved to cloud!', 'success');
 };
 
 let deleteTargetId = null;
