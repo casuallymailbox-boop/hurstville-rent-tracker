@@ -2,16 +2,15 @@
  * Rent Tracker - Hurstville
  * Using GitHub API for personal cloud storage
  * ⚠️ For personal use only - token is exposed in client-side code
- * ⚠️ SECURITY: Rotate your token regularly and keep repo private
  */
 
-// ===== GITHUB CONFIGURATION =====
+// ===== GITHUB CONFIGURATION (UPDATE THESE) =====
 const GITHUB_CONFIG = {
-    owner: 'casuallymailbox-boop',
-    repo: 'hurstville-rent-tracker',
-    branch: 'main',
-    path: 'data/rent-data.json',
-   
+    owner: 'casuallymailbox-boop',        // Your GitHub username
+    repo: 'hurstville-rent-tracker',       // Your repo name
+    branch: 'main',                        // Your branch name
+    path: 'data/rent-data.json',           // Path to your data file
+    token: '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' // Paste your PAT here
 };
 
 // ===== PRE-LOADED DATA (From Rent for Hurstville.xlsx) =====
@@ -83,7 +82,10 @@ let bondData = {
     roommateBondDate: '2-Feb-2026',
     roommateBondNotes: 'Electricity'
 };
+let githubData = null;
 let isSyncing = false;
+let lastSyncTime = 0;
+const SYNC_INTERVAL = 60000; // 1 minute between syncs
 
 // ===== THEME =====
 const initTheme = () => {
@@ -184,7 +186,7 @@ const fetchFromGitHub = async () => {
         }
         
         const data = await response.json();
-        const content = atob(data.content);
+        const content = atob(data.content); // Decode base64
         return JSON.parse(content);
     } catch (error) {
         console.error('❌ Fetch from GitHub failed:', error);
@@ -194,6 +196,7 @@ const fetchFromGitHub = async () => {
 
 const saveToGitHub = async (data) => {
     try {
+        // First, get the current file to get its SHA
         const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}?ref=${GITHUB_CONFIG.branch}`;
         const response = await fetch(url, { headers: getGitHubHeaders() });
         
@@ -203,7 +206,8 @@ const saveToGitHub = async (data) => {
             sha = existing.sha;
         }
         
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+        // Prepare the update
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))); // Encode to base64
         
         const body = {
             message: `Update rent data - ${new Date().toISOString()}`,
@@ -212,7 +216,7 @@ const saveToGitHub = async (data) => {
         };
         
         if (sha) {
-            body.sha = sha;
+            body.sha = sha; // Required for updates
         }
         
         const saveResponse = await fetch(url, {
@@ -237,6 +241,7 @@ const saveToGitHub = async (data) => {
 // ===== LOAD/SAVE WITH FALLBACK =====
 const loadData = async () => {
     try {
+        // Try GitHub first
         const githubData = await fetchFromGitHub();
         
         if (githubData) {
@@ -244,8 +249,10 @@ const loadData = async () => {
             currentData = githubData.rentEntries || [];
             bondData = githubData.bondData || bondData;
             
+            // Cache to localStorage for offline use
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(githubData));
         } else {
+            // Fallback to localStorage
             const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (stored) {
                 const cached = JSON.parse(stored);
@@ -253,6 +260,7 @@ const loadData = async () => {
                 bondData = cached.bondData || bondData;
                 console.log('✅ Loaded data from localStorage cache');
             } else {
+                // Use defaults
                 currentData = [...defaultData];
                 console.log('✅ Using default data');
             }
@@ -264,6 +272,7 @@ const loadData = async () => {
         return true;
     } catch (error) {
         console.error('❌ Load error:', error);
+        // Fallback to defaults
         currentData = [...defaultData];
         renderSummary(currentData);
         populateMonthFilter(currentData);
@@ -280,7 +289,10 @@ const saveData = async () => {
             lastUpdated: new Date().toISOString()
         };
         
+        // Save to GitHub
         const githubSuccess = await saveToGitHub(dataToSave);
+        
+        // Also cache to localStorage for offline use
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
         
         if (githubSuccess) {
@@ -292,6 +304,7 @@ const saveData = async () => {
         }
     } catch (error) {
         console.error('❌ Save error:', error);
+        // Still save to localStorage as fallback
         const dataToSave = {
             rentEntries: currentData,
             bondData: bondData,
@@ -479,6 +492,7 @@ const importData = (event) => {
                     bondData = imported.bondData;
                 }
                 
+                // Save to GitHub
                 await saveData();
                 
                 renderSummary(currentData);
@@ -691,6 +705,7 @@ window.saveNewEntry = async function(e) {
     
     const newEntry = { id: generateId(), date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     
+    // Add to local data immediately for instant UI update
     currentData.push(newEntry);
     currentData.sort((a, b) => new Date(formatDateForInput(a.date)) - new Date(formatDateForInput(b.date)));
     renderSummary(currentData);
@@ -698,6 +713,7 @@ window.saveNewEntry = async function(e) {
     renderTable(currentData);
     window.closeAddModal();
     
+    // Save to GitHub in background
     showToast('Saving to GitHub...', 'loading');
     const saved = await saveData();
     
@@ -763,12 +779,14 @@ window.updateEntry = async function(e) {
     let status = 'pending';
     if (iPaid && iPaid > 0) status = 'paid';
     
+    // Update local data immediately
     currentData[index] = { ...currentData[index], date, totalRent, iPaid, roommatePaid, netPaid, roommatePaidOn, status, notes };
     renderSummary(currentData);
     populateMonthFilter(currentData);
     renderTable(currentData);
     window.closeEditModal();
     
+    // Save to GitHub in background
     showToast('Saving to GitHub...', 'loading');
     const saved = await saveData();
     
@@ -803,6 +821,7 @@ window.saveBond = async function(e) {
         formattedDate = `${dateObj.getDate()}-${months[dateObj.getMonth()]}-${dateObj.getFullYear()}`;
     }
     
+    // Update local bond data immediately
     if (bondType === 'my') {
         bondData.myBond = amount;
         bondData.myBondDate = formattedDate;
@@ -816,6 +835,7 @@ window.saveBond = async function(e) {
     renderSummary(currentData);
     window.closeBondModal();
     
+    // Save to GitHub in background
     showToast('Saving bond to GitHub...', 'loading');
     const saved = await saveData();
     
@@ -843,6 +863,7 @@ window.closeDeleteModal = function() {
 window.executeDelete = async function() {
     if (!deleteTargetId) return;
     
+    // Remove from local data immediately
     const index = currentData.findIndex(item => item.id === deleteTargetId);
     if (index === -1) {
         showToast('Entry not found', 'error');
@@ -856,6 +877,7 @@ window.executeDelete = async function() {
     renderTable(currentData);
     window.closeDeleteModal();
     
+    // Save to GitHub in background
     showToast('Deleting from GitHub...', 'loading');
     const saved = await saveData();
     
@@ -993,7 +1015,8 @@ const init = async () => {
     console.log('🚀 Initializing Rent Tracker with GitHub storage...');
     console.log('⚠️  Personal use only - token is in client-side code');
     
-    if (GITHUB_CONFIG.token === 'YOUR_PERSONAL_ACCESS_TOKEN_HERE' || !GITHUB_CONFIG.token) {
+    // Validate config
+    if (GITHUB_CONFIG.token === 'YOUR_PERSONAL_ACCESS_TOKEN_HERE') {
         console.error('❌ Please update GITHUB_CONFIG.token with your Personal Access Token');
         showToast('Configure GitHub token in script.js', 'error');
         return;
