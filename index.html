@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rent Tracker - Hurstville</title>
-    <meta name="description" content="Track rent payments and roommate contributions for Hurstville property">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -39,22 +38,18 @@
     </header>
 
     <main class="container">
-        <!-- Toast Notification -->
         <div id="toast" class="toast" style="display: none;">
             <span id="toastMessage"></span>
             <button class="toast-close" id="toastClose">&times;</button>
         </div>
 
-        <!-- Loading State -->
         <div id="loadingState" class="loading-state" style="display: none;">
             <div class="spinner"></div>
             <p>Syncing data...</p>
         </div>
 
-        <!-- Summary Cards -->
         <section class="summary-grid" id="summaryGrid"></section>
 
-        <!-- Controls -->
         <section class="controls">
             <div class="search-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -105,7 +100,6 @@
             </div>
         </section>
 
-        <!-- Payment Table -->
         <section class="table-container">
             <table class="payment-table" id="paymentTable">
                 <thead>
@@ -124,7 +118,6 @@
             </table>
         </section>
 
-        <!-- Empty State -->
         <div id="emptyState" class="empty-state" style="display: none;">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -262,9 +255,7 @@
                 <button class="btn-close" id="btnCloseNotesModal" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="notesContent" class="notes-content">
-                    <!-- Notes will be displayed here -->
-                </div>
+                <div id="notesContent" class="notes-content"></div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancel" id="btnCancelNotes">Close</button>
                 </div>
