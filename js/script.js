@@ -1,7 +1,7 @@
 /**
  * Rent Tracker - Hurstville
  * Using Firebase Firestore for PERMANENT cloud storage
- * Includes: Rent & Utilities (Gas, Elec, Internet, Misc)
+ * Includes: Rent & Utilities (Gas, Elec, Internet, Misc) + Reports
  */
 
 // ===== FIREBASE CONFIGURATION =====
@@ -78,7 +78,7 @@ const defaultData = [
 
 const THEME_KEY = 'hurstville_theme';
 let currentData = [];
-let utilityData = []; // New array for utilities
+let utilityData = []; // Array for utilities
 let bondData = {
     myBond: 3000,
     myBondDate: '27-Jan-2026',
@@ -195,6 +195,10 @@ const renderSummary = (data) => {
     const totalMyUtilities = myUtilities + myShareSplit;
     const totalRoommateUtilities = roommateUtilities + roommateShareSplit;
 
+    // NEW: Specific Utility Breakdown for Summary
+    const elecTotal = utilityData.filter(u => u.type === 'Electricity').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+    const gasTotal = utilityData.filter(u => u.type === 'Gas').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+
     summaryGrid.innerHTML = `
         <div class="summary-card">
             <div class="label">Total Weeks</div>
@@ -229,6 +233,16 @@ const renderSummary = (data) => {
         <div class="summary-card" style="border-color: #f59e0b;">
             <div class="label">Roommate Utilities</div>
             <div class="value" style="color: #f59e0b;">${formatCurrency(totalRoommateUtilities)}</div>
+        </div>
+
+        <!-- NEW: Specific Utility Highlights -->
+        <div class="summary-card" style="border-color: #3b82f6;">
+            <div class="label">Total Electricity</div>
+            <div class="value" style="color: #3b82f6;">${formatCurrency(elecTotal)}</div>
+        </div>
+        <div class="summary-card" style="border-color: #ef4444;">
+            <div class="label">Total Gas</div>
+            <div class="value" style="color: #ef4444;">${formatCurrency(gasTotal)}</div>
         </div>
 
         <div class="summary-card" style="position: relative;">
@@ -605,6 +619,102 @@ window.saveUtility = async function(e) {
     }
 };
 
+// ===== REPORT FUNCTIONS (NEW) =====
+window.openUtilityReport = function() {
+    const modalOverlay = document.getElementById('reportModalOverlay');
+    if (!modalOverlay) return;
+    
+    generateUtilityReport();
+    modalOverlay.style.display = 'flex';
+};
+
+window.closeUtilityReport = function() {
+    const modalOverlay = document.getElementById('reportModalOverlay');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+};
+
+const generateUtilityReport = () => {
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+
+    const types = ['Electricity', 'Gas', 'Internet', 'Misc'];
+    let html = '<div style="overflow-x: auto;"><table class="payment-table" style="min-width: 100%;"><thead><tr><th>Type</th><th>Total Cost</th><th>Paid by Me</th><th>Paid by Roommate</th><th>My Share (Est.)</th></tr></thead><tbody>';
+
+    types.forEach(type => {
+        const items = utilityData.filter(u => u.type === type);
+        if (items.length === 0) return;
+
+        const total = items.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const paidByMe = items.filter(u => u.paidBy === 'Me').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const paidByRoommate = items.filter(u => u.paidBy === 'Roommate').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const split = items.filter(u => u.paidBy === 'Split').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        
+        // My share = What I paid fully + Half of split
+        const myShare = paidByMe + (split / 2);
+        // Roommate share = What they paid fully + Half of split
+        const roommateShare = paidByRoommate + (split / 2);
+
+        html += `
+            <tr>
+                <td><strong>${type}</strong> <small style="color:var(--text-secondary)">(${items.length} bills)</small></td>
+                <td>${formatCurrency(total)}</td>
+                <td style="color: var(--success)">${formatCurrency(paidByMe)}</td>
+                <td style="color: var(--primary)">${formatCurrency(paidByRoommate)}</td>
+                <td style="font-weight:bold">${formatCurrency(myShare)}</td>
+            </tr>
+        `;
+    });
+
+    if (html.indexOf('<tr>') === -1) {
+        html += '<tr><td colspan="5" style="text-align:center">No utility data found</td></tr>';
+    }
+
+    html += '</tbody></table></div>';
+    
+    // Add Grand Total
+    const grandTotal = utilityData.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+    const grandMyShare = utilityData.filter(u => u.paidBy === 'Me').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0) + 
+                         (utilityData.filter(u => u.paidBy === 'Split').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0) / 2);
+    
+    html += `
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem;">
+            <span>Grand Total Utilities:</span>
+            <span>${formatCurrency(grandTotal)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: var(--success); margin-top: 0.5rem;">
+            <span>Total My Share:</span>
+            <span>${formatCurrency(grandMyShare)}</span>
+        </div>
+    `;
+
+    reportContent.innerHTML = html;
+};
+
+window.exportUtilityReport = function() {
+    const types = ['Electricity', 'Gas', 'Internet', 'Misc'];
+    const data = [['Type', 'Total Cost', 'Paid by Me', 'Paid by Roommate', 'My Share (Est.)']];
+
+    types.forEach(type => {
+        const items = utilityData.filter(u => u.type === type);
+        if (items.length === 0) return;
+
+        const total = items.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const paidByMe = items.filter(u => u.paidBy === 'Me').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const paidByRoommate = items.filter(u => u.paidBy === 'Roommate').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const split = items.filter(u => u.paidBy === 'Split').reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+        const myShare = paidByMe + (split / 2);
+
+        data.push([type, total, paidByMe, paidByRoommate, myShare]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Utility Report');
+    XLSX.writeFile(wb, `Utility-Report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Report exported!', 'success');
+};
+
+
 window.openEditModal = function(id) {
     const editModalOverlay = document.getElementById('editModalOverlay');
     if (!editModalOverlay) return;
@@ -906,9 +1016,12 @@ const setupEventListeners = () => {
     const btnAddEntry = document.getElementById('btnAddEntry');
     if (btnAddEntry) btnAddEntry.addEventListener('click', window.openAddModal);
     
-    // NEW: Utility Button Listener
     const btnAddUtility = document.getElementById('btnAddUtility');
     if (btnAddUtility) btnAddUtility.addEventListener('click', window.openUtilityModal);
+    
+    // NEW: Report Button Listener
+    const btnUtilityReport = document.getElementById('btnUtilityReport');
+    if (btnUtilityReport) btnUtilityReport.addEventListener('click', window.openUtilityReport);
     
     const btnAddFromEmpty = document.getElementById('btnAddFromEmpty');
     if (btnAddFromEmpty) btnAddFromEmpty.addEventListener('click', window.openAddModal);
@@ -959,7 +1072,7 @@ const setupEventListeners = () => {
     const btnConfirmDelete = document.getElementById('btnConfirmDelete');
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', window.executeDelete);
     
-    // NEW: Utility Modal Listeners
+    // Utility Modal Listeners
     const btnCloseUtilityModal = document.getElementById('btnCloseUtilityModal');
     if (btnCloseUtilityModal) btnCloseUtilityModal.addEventListener('click', window.closeUtilityModal);
     
@@ -968,6 +1081,13 @@ const setupEventListeners = () => {
     
     const utilityForm = document.getElementById('utilityForm');
     if (utilityForm) utilityForm.addEventListener('submit', window.saveUtility);
+    
+    // NEW: Report Modal Listeners
+    const btnCloseReportModal = document.getElementById('btnCloseReportModal');
+    if (btnCloseReportModal) btnCloseReportModal.addEventListener('click', window.closeUtilityReport);
+    
+    const btnCancelReport = document.getElementById('btnCancelReport');
+    if (btnCancelReport) btnCancelReport.addEventListener('click', window.closeUtilityReport);
     
     const addEntryForm = document.getElementById('addEntryForm');
     if (addEntryForm) addEntryForm.addEventListener('submit', window.saveNewEntry);
@@ -1015,6 +1135,12 @@ const setupEventListeners = () => {
         if (e.target === utilityModalOverlay) window.closeUtilityModal();
     });
     
+    // NEW: Report Modal Overlay Click
+    const reportModalOverlay = document.getElementById('reportModalOverlay');
+    if (reportModalOverlay) reportModalOverlay.addEventListener('click', (e) => {
+        if (e.target === reportModalOverlay) window.closeUtilityReport();
+    });
+    
     const deleteModalOverlay = document.getElementById('deleteModalOverlay');
     if (deleteModalOverlay) deleteModalOverlay.addEventListener('click', (e) => {
         if (e.target === deleteModalOverlay) window.closeDeleteModal();
@@ -1028,6 +1154,7 @@ const setupEventListeners = () => {
             const notesModal = document.getElementById('notesModalOverlay');
             const bondModal = document.getElementById('bondModalOverlay');
             const utilityModal = document.getElementById('utilityModalOverlay');
+            const reportModal = document.getElementById('reportModalOverlay');
             const toast = document.getElementById('toast');
             
             if (modal && modal.style.display === 'flex') window.closeAddModal();
@@ -1036,6 +1163,7 @@ const setupEventListeners = () => {
             if (notesModal && notesModal.style.display === 'flex') window.closeNotesModal();
             if (bondModal && bondModal.style.display === 'flex') window.closeBondModal();
             if (utilityModal && utilityModal.style.display === 'flex') window.closeUtilityModal();
+            if (reportModal && reportModal.style.display === 'flex') window.closeUtilityReport();
             if (toast && toast.style.display === 'flex') toast.style.display = 'none';
         }
     });
@@ -1065,6 +1193,7 @@ const init = async () => {
     const notesModalOverlay = document.getElementById('notesModalOverlay');
     const bondModalOverlay = document.getElementById('bondModalOverlay');
     const utilityModalOverlay = document.getElementById('utilityModalOverlay');
+    const reportModalOverlay = document.getElementById('reportModalOverlay'); // NEW
     const toast = document.getElementById('toast');
     
     if (modalOverlay) modalOverlay.style.display = 'none';
@@ -1073,6 +1202,7 @@ const init = async () => {
     if (notesModalOverlay) notesModalOverlay.style.display = 'none';
     if (bondModalOverlay) bondModalOverlay.style.display = 'none';
     if (utilityModalOverlay) utilityModalOverlay.style.display = 'none';
+    if (reportModalOverlay) reportModalOverlay.style.display = 'none'; // NEW
     if (toast) toast.style.display = 'none';
     
     setupEventListeners();
