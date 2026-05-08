@@ -637,6 +637,24 @@ body {
     width: 100%;
 }
 
+/* ===== UTILITY REPORT STYLES ===== */
+#reportContent table th {
+    background: var(--bg-secondary);
+    font-size: 0.8rem;
+}
+
+#reportContent table td {
+    font-size: 0.9rem;
+}
+
+/* Ensure the report modal doesn't overflow on small screens */
+@media (max-width: 768px) {
+    #reportModalOverlay .modal {
+        width: 95%;
+        max-height: 85vh;
+    }
+}
+
 /* ===== MOBILE RESPONSIVE ===== */
 @media (max-width: 768px) {
     .header { padding: 1rem 0.75rem; }
